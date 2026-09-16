@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_anon_key: str = ""
     supabase_jwt_audience: str = "authenticated"
+    supabase_jwt_secret: str = ""
+    auth_enforced: bool = False
     model_config = SettingsConfigDict(
         env_file=Path(__file__).resolve().parents[4] / ".env", extra="ignore"
     )

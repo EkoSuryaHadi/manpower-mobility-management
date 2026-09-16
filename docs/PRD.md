@@ -19,3 +19,4 @@ Worker records currently expose employee_number, full_name, status, and created_
 - Worker documents will use private object storage and signed URLs after permission checks.
 - Worker status supports active and inactive; inactive workers cannot be selected for new assignments.
 - Worker endpoints require an `X-Organization-ID` scope header during the current transition to authenticated Supabase users. The payload organization must match the request scope.
+- Supabase JWT validation is now scaffolded with audience and role claims; enforcement is enabled by setting `AUTH_ENFORCED=true` and providing `SUPABASE_JWT_SECRET`.
