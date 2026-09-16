@@ -4,10 +4,20 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import Worker
 from app.schemas import WorkerCreate, WorkerRead, WorkerUpdate
+from app.security import Principal, get_principal
 
 router = APIRouter(prefix="/api/v1/workers", tags=["workers"])
 
-def organization_scope(x_organization_id: str = Header(...)) -> str:
+def organization_scope(
+    principal: Principal = Depends(get_principal),
+    x_organization_id: str | None = Header(default=None),
+) -> str:
+    if principal.organization_id:
+        if x_organization_id and x_organization_id != principal.organization_id:
+            raise HTTPException(status_code=403, detail="Organization scope does not match token")
+        return principal.organization_id
+    if not x_organization_id:
+        raise HTTPException(status_code=400, detail="X-Organization-ID header is required")
     return x_organization_id
 
 @router.get("", response_model=list[WorkerRead])

@@ -39,3 +39,6 @@ def test_workers_are_isolated_by_organization():
     created = client.post("/api/v1/workers", headers={"X-Organization-ID": "org-b"}, json={"organization_id": "org-b", "employee_number": "EMP-003", "full_name": "Sari"})
     worker_id = created.json()["id"]
     assert client.get(f"/api/v1/workers/{worker_id}", headers={"X-Organization-ID": "org-a"}).status_code == 404
+
+def test_organization_header_is_required_in_local_mode():
+    assert client.get("/api/v1/workers").status_code == 400
