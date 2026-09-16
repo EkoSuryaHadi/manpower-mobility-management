@@ -1,0 +1,6 @@
+import Link from "next/link";
+export function Heading({label,title,description,children}:{label:string;title:string;description:string;children?:React.ReactNode}){return <div className="page-heading"><div><p className="eyebrow">{label}</p><h1>{title}</h1><p className="subtitle">{description}</p></div><div className="heading-actions">{children}</div></div>;}
+const labels:Record<string,string>={active:"Aktif",inactive:"Nonaktif",draft:"Draf",pending:"Menunggu",approved:"Disetujui",rejected:"Ditolak",planned:"Terjadwal",departed:"Berangkat",arrived:"Tiba",returned:"Kembali",cancelled:"Dibatalkan",demobilized:"Selesai",submitted:"Diajukan",mobilized:"Dimobilisasi",completed:"Selesai"};
+export function Badge({status}:{status:string}){return <span className={"badge "+status}>{labels[status]||status}</span>;}
+export function Empty({title,description,href,label}:{title:string;description:string;href?:string;label?:string}){return <div className="empty"><span className="empty-symbol" aria-hidden="true">＋</span><h3>{title}</h3><p>{description}</p>{href&&<Link className="button secondary" href={href}>{label} →</Link>}</div>;}
+export function ErrorBox({message}:{message:string}){return message?<div role="alert" className="error">{message}</div>:null;}

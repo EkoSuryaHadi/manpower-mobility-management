@@ -1,1 +1,2 @@
-export default function Home() { return <main className="shell"><p className="eyebrow">SPRINT 0 · FOUNDATION</p><h1>Manpower mobility,<br /><em>under control.</em></h1><p className="intro">A single operational view for worker readiness, assignment approvals, mobilization, and return.</p><div className="status"><span className="dot" /> Systems foundation ready <span className="tag">API v0.1.0</span></div><section><div><strong>Next up</strong><p>Worker registry and identity boundaries</p></div><a href="http://localhost:8000/docs">Open API docs →</a></section></main>; }
+import { redirect } from "next/navigation";
+export default function Home(){redirect("/dashboard");}

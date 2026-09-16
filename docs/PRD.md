@@ -5,7 +5,7 @@ Operations teams need one reliable place to control manpower mobility from worke
 ## Delivery status
 
 - Phase 0 foundation: complete. Next.js, FastAPI, PostgreSQL compose configuration, environment examples, health checks, SQLAlchemy, Alembic, and initial documentation are available.
-- Phase 1 worker registry: in progress. Worker create, list, detail, update, status validation, and initial migration are available.
+- Phase 1 worker registry: UI/API foundation available. Worker create, list, detail, update, status validation, and initial migration are available; the redesigned screen currently exposes create, filter, status, and basic profile detail.
 - Phase 1 identity boundary: configuration prepared for Supabase Auth. Authentication enforcement, roles, and organization membership are the next implementation step.
 
 ## Current API behavior
@@ -35,5 +35,11 @@ Worker records currently expose employee_number, full_name, status, and created_
 - Frontend now includes Supabase email/password sign-in, operational dashboard metrics, worker navigation, and assignment report download.
 - Authenticated frontend requests now forward the Supabase access token and organization metadata; local development falls back to `local-org` when Supabase is not configured.
 - Frontend now exposes assignment creation/listing and approval decision queues in addition to Worker Registry and dashboard.
+- Sprint 0 UI refresh now establishes an operations control-center shell: navy navigation, light workspace canvas, compact headings, real-data metric cards, pipeline overview, scan-friendly tables, responsive mobile navigation, explicit loading/error/empty states, and Indonesian operational copy.
+- Frontend now includes assignment creation with active-worker selection, approval decision actions with comments, mobilization/demobilization status lists, and authenticated CSV report download.
 - Production baseline now includes API/web container images, CI tests/builds, database readiness checks, and mandatory authentication validation in production.
 - Frontend dependency audit is clean on Next.js 16.3.5; production deployment still requires real Supabase and private storage credentials.
+
+## Scope boundary after UI refresh
+
+The redesign is a functional operational surface over the existing APIs, not a claim that every planned workflow is complete. Worker document/history tabs, requirement authoring, richer readiness detail, and end-to-end travel forms remain follow-on work. Production rollout still requires enforced authentication, real organization membership, private storage credentials, and seeded operational data.
