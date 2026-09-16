@@ -11,3 +11,5 @@ Document metadata endpoints: `GET/POST /api/v1/workers/{worker_id}/documents`. T
 Download endpoint: `GET /api/v1/workers/{worker_id}/documents/{document_id}/download`. It returns a five-minute presigned URL after organization checks. Configure the S3-compatible bucket variables before using it.
 
 Upload endpoint: `POST /api/v1/workers/{worker_id}/documents/upload` with multipart `file` and `document_type`. It accepts PDF, JPEG, and PNG files and stores them under an organization-scoped object key.
+
+Assignment endpoints: `GET/POST /api/v1/assignments` and `PATCH /api/v1/assignments/{assignment_id}`. Only active workers can receive assignments; admin, HR, and manager roles can create or update them.

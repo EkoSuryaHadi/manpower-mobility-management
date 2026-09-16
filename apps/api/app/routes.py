@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Uploa
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.db import get_db
-from app.models import Worker, WorkerDocument
-from app.schemas import DocumentCreate, DocumentRead, WorkerCreate, WorkerRead, WorkerUpdate
+from app.models import Assignment, Worker, WorkerDocument
+from app.schemas import AssignmentCreate, AssignmentRead, AssignmentUpdate, DocumentCreate, DocumentRead, WorkerCreate, WorkerRead, WorkerUpdate
 from app.security import Principal, get_principal, require_roles
 from app.storage import create_download_url, upload_file
 
@@ -96,3 +96,31 @@ def upload_document(worker_id: int, document_type: str = Form(...), file: Upload
     return document
 
 app_router = router
+
+assignments_router = APIRouter(prefix="/api/v1/assignments", tags=["assignments"])
+
+@assignments_router.get("", response_model=list[AssignmentRead])
+def list_assignments(organization_id: str = Depends(organization_scope), db: Session = Depends(get_db)):
+    return list(db.scalars(select(Assignment).where(Assignment.organization_id == organization_id).order_by(Assignment.id)).all())
+
+@assignments_router.post("", response_model=AssignmentRead, status_code=201)
+def create_assignment(payload: AssignmentCreate, organization_id: str = Depends(organization_scope), principal: Principal = Depends(require_roles("admin", "hr", "manager")), db: Session = Depends(get_db)):
+    worker = db.scalar(select(Worker).where(Worker.id == payload.worker_id, Worker.organization_id == organization_id, Worker.status == "active"))
+    if worker is None:
+        raise HTTPException(status_code=404, detail="Active worker not found")
+    assignment = Assignment(organization_id=organization_id, **payload.model_dump())
+    db.add(assignment)
+    db.commit()
+    db.refresh(assignment)
+    return assignment
+
+@assignments_router.patch("/{assignment_id}", response_model=AssignmentRead)
+def update_assignment(assignment_id: int, payload: AssignmentUpdate, organization_id: str = Depends(organization_scope), principal: Principal = Depends(require_roles("admin", "hr", "manager")), db: Session = Depends(get_db)):
+    assignment = db.scalar(select(Assignment).where(Assignment.id == assignment_id, Assignment.organization_id == organization_id))
+    if assignment is None:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(assignment, field, value)
+    db.commit()
+    db.refresh(assignment)
+    return assignment

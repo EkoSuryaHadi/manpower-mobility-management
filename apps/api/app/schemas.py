@@ -29,3 +29,22 @@ class DocumentRead(DocumentCreate):
     status: str
     created_at: datetime | None = None
     model_config = ConfigDict(from_attributes=True)
+
+class AssignmentCreate(BaseModel):
+    worker_id: int
+    position: str = Field(min_length=1, max_length=120)
+    site: str = Field(min_length=1, max_length=160)
+    starts_at: datetime | None = None
+    ends_at: datetime | None = None
+
+class AssignmentUpdate(BaseModel):
+    status: str | None = Field(default=None, pattern="^(draft|submitted|approved|mobilized|active|completed|demobilized)$")
+    site: str | None = Field(default=None, min_length=1, max_length=160)
+    ends_at: datetime | None = None
+
+class AssignmentRead(AssignmentCreate):
+    id: int
+    organization_id: str
+    status: str
+    created_at: datetime | None = None
+    model_config = ConfigDict(from_attributes=True)

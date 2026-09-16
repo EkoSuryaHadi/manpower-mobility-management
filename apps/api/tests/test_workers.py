@@ -59,3 +59,12 @@ def test_upload_rejects_unsupported_file_type():
     worker = client.post("/api/v1/workers", headers={"X-Organization-ID": "org-upload"}, json={"organization_id": "org-upload", "employee_number": "EMP-UP", "full_name": "Tono"}).json()
     response = client.post(f"/api/v1/workers/{worker['id']}/documents/upload", headers={"X-Organization-ID": "org-upload"}, data={"document_type": "id"}, files={"file": ("script.exe", b"bad", "application/octet-stream")})
     assert response.status_code == 415
+
+def test_assignment_lifecycle_starts_with_active_worker():
+    worker = client.post("/api/v1/workers", headers={"X-Organization-ID": "org-assignment"}, json={"organization_id": "org-assignment", "employee_number": "EMP-AS", "full_name": "Andi"}).json()
+    response = client.post("/api/v1/assignments", headers={"X-Organization-ID": "org-assignment"}, json={"worker_id": worker["id"], "position": "Rigger", "site": "Site A"})
+    assert response.status_code == 201
+    assignment_id = response.json()["id"]
+    updated = client.patch(f"/api/v1/assignments/{assignment_id}", headers={"X-Organization-ID": "org-assignment"}, json={"status": "approved"})
+    assert updated.status_code == 200
+    assert updated.json()["status"] == "approved"
