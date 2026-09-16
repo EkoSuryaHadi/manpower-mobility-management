@@ -15,3 +15,5 @@ Upload endpoint: `POST /api/v1/workers/{worker_id}/documents/upload` with multip
 Assignment endpoints: `GET/POST /api/v1/assignments` and `PATCH /api/v1/assignments/{assignment_id}`. Only active workers can receive assignments; admin, HR, and manager roles can create or update them.
 
 Readiness endpoint: `GET /api/v1/assignments/{assignment_id}/readiness`. The first readiness pass reports `ready` or `incomplete` using worker activity, assignment status, and document presence.
+
+Requirement endpoints: `GET/POST /api/v1/requirements`. Rules are scoped by organization, position, site, and required document type; admin and HR can create rules.

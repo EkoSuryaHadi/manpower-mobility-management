@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Uploa
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.db import get_db
-from app.models import Assignment, Worker, WorkerDocument
-from app.schemas import AssignmentCreate, AssignmentRead, AssignmentUpdate, DocumentCreate, DocumentRead, ReadinessRead, WorkerCreate, WorkerRead, WorkerUpdate
+from app.models import Assignment, Requirement, Worker, WorkerDocument
+from app.schemas import AssignmentCreate, AssignmentRead, AssignmentUpdate, DocumentCreate, DocumentRead, ReadinessRead, RequirementCreate, RequirementRead, WorkerCreate, WorkerRead, WorkerUpdate
 from app.security import Principal, get_principal, require_roles
 from app.storage import create_download_url, upload_file
 
@@ -131,12 +131,31 @@ def assignment_readiness(assignment_id: int, organization_id: str = Depends(orga
     if assignment is None:
         raise HTTPException(status_code=404, detail="Assignment not found")
     worker = db.get(Worker, assignment.worker_id)
-    documents = list(db.scalars(select(WorkerDocument).where(WorkerDocument.worker_id == assignment.worker_id, WorkerDocument.organization_id == organization_id)).all())
+    documents = list(db.scalars(select(WorkerDocument).where(WorkerDocument.worker_id == assignment.worker_id, WorkerDocument.organization_id == organization_id, WorkerDocument.status == "uploaded")).all())
+    requirements = list(db.scalars(select(Requirement).where(Requirement.organization_id == organization_id, Requirement.position == assignment.position, Requirement.active.is_(True), Requirement.site.in_([assignment.site, "*"]))).all())
     reasons: list[str] = []
     if worker is None or worker.status != "active":
         reasons.append("worker_inactive")
     if assignment.status not in {"draft", "submitted", "approved"}:
         reasons.append("assignment_not_ready_for_precheck")
-    if not documents:
+    document_types = {document.document_type for document in documents}
+    missing = [requirement.document_type for requirement in requirements if requirement.document_type not in document_types]
+    if missing:
+        reasons.extend([f"missing_document:{document_type}" for document_type in sorted(set(missing))])
+    elif not requirements and not documents:
         reasons.append("no_documents")
     return {"assignment_id": assignment.id, "status": "ready" if not reasons else "incomplete", "ready": not reasons, "reasons": reasons, "document_count": len(documents)}
+
+requirements_router = APIRouter(prefix="/api/v1/requirements", tags=["requirements"])
+
+@requirements_router.get("", response_model=list[RequirementRead])
+def list_requirements(organization_id: str = Depends(organization_scope), db: Session = Depends(get_db)):
+    return list(db.scalars(select(Requirement).where(Requirement.organization_id == organization_id).order_by(Requirement.id)).all())
+
+@requirements_router.post("", response_model=RequirementRead, status_code=201)
+def create_requirement(payload: RequirementCreate, organization_id: str = Depends(organization_scope), principal: Principal = Depends(require_roles("admin", "hr")), db: Session = Depends(get_db)):
+    requirement = Requirement(organization_id=organization_id, **payload.model_dump())
+    db.add(requirement)
+    db.commit()
+    db.refresh(requirement)
+    return requirement

@@ -35,3 +35,12 @@ class Assignment(Base):
     starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+class Requirement(Base):
+    __tablename__ = "requirements"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    organization_id: Mapped[str] = mapped_column(String(80), index=True)
+    position: Mapped[str] = mapped_column(String(120), index=True)
+    site: Mapped[str] = mapped_column(String(160), default="*")
+    document_type: Mapped[str] = mapped_column(String(50))
+    active: Mapped[bool] = mapped_column(default=True)

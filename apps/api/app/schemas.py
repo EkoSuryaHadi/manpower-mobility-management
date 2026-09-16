@@ -55,3 +55,14 @@ class ReadinessRead(BaseModel):
     ready: bool
     reasons: list[str]
     document_count: int
+
+class RequirementCreate(BaseModel):
+    position: str = Field(min_length=1, max_length=120)
+    site: str = Field(default="*", max_length=160)
+    document_type: str = Field(min_length=1, max_length=50)
+
+class RequirementRead(RequirementCreate):
+    id: int
+    organization_id: str
+    active: bool
+    model_config = ConfigDict(from_attributes=True)

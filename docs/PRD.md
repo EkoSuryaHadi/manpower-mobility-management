@@ -27,3 +27,4 @@ Worker records currently expose employee_number, full_name, status, and created_
 - Private document upload now validates PDF/JPEG/PNG content types and creates organization-scoped object keys before metadata persistence.
 - Assignment Management now supports organization-scoped creation for active workers and lifecycle updates from draft through demobilized.
 - Readiness Engine v1 now reports missing documents and invalid worker/assignment state for an assignment.
+- Requirement Master v1 now stores active document rules per organization, position, and site; readiness reports missing required document types.

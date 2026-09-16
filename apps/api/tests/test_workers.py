@@ -76,3 +76,11 @@ def test_assignment_readiness_reports_missing_documents():
     assert response.status_code == 200
     assert response.json()["status"] == "incomplete"
     assert "no_documents" in response.json()["reasons"]
+
+def test_requirement_rule_is_used_by_readiness():
+    worker = client.post("/api/v1/workers", headers={"X-Organization-ID": "org-rule"}, json={"organization_id": "org-rule", "employee_number": "EMP-RULE", "full_name": "Maya"}).json()
+    requirement = client.post("/api/v1/requirements", headers={"X-Organization-ID": "org-rule"}, json={"position": "Welder", "site": "Site C", "document_type": "certificate"})
+    assert requirement.status_code == 201
+    assignment = client.post("/api/v1/assignments", headers={"X-Organization-ID": "org-rule"}, json={"worker_id": worker["id"], "position": "Welder", "site": "Site C"}).json()
+    response = client.get(f"/api/v1/assignments/{assignment['id']}/readiness", headers={"X-Organization-ID": "org-rule"})
+    assert response.json()["reasons"] == ["missing_document:certificate"]
