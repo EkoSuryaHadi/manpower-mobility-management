@@ -42,3 +42,9 @@ def test_workers_are_isolated_by_organization():
 
 def test_organization_header_is_required_in_local_mode():
     assert client.get("/api/v1/workers").status_code == 400
+
+def test_worker_document_metadata_is_scoped():
+    worker = client.post("/api/v1/workers", headers={"X-Organization-ID": "org-doc"}, json={"organization_id": "org-doc", "employee_number": "EMP-DOC", "full_name": "Dewi"}).json()
+    response = client.post(f"/api/v1/workers/{worker['id']}/documents", headers={"X-Organization-ID": "org-doc"}, json={"document_type": "passport", "file_name": "passport.pdf", "object_key": "org-doc/workers/1/passport.pdf"})
+    assert response.status_code == 201
+    assert client.get(f"/api/v1/workers/{worker['id']}/documents", headers={"X-Organization-ID": "org-doc"}).json()[0]["document_type"] == "passport"

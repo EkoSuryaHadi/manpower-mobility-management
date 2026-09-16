@@ -5,3 +5,5 @@ Base path: `/api/v1`. Sprint 0: `GET /health` returns service, status, and envir
 Worker endpoints use the authenticated token's organization claim when auth is enabled. During local development, or before a token organization is available, they require `X-Organization-ID`. If both are supplied, they must match.
 
 Worker permissions: `admin` and `hr` may create and update workers; `admin`, `hr`, `manager`, and `worker` may read workers within their organization. The local development principal uses the `admin` role.
+
+Document metadata endpoints: `GET/POST /api/v1/workers/{worker_id}/documents`. The API stores a private `object_key`; signed URL generation and actual object upload depend on the configured private storage provider.

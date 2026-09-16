@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.db import get_db
-from app.models import Worker
-from app.schemas import WorkerCreate, WorkerRead, WorkerUpdate
+from app.models import Worker, WorkerDocument
+from app.schemas import DocumentCreate, DocumentRead, WorkerCreate, WorkerRead, WorkerUpdate
 from app.security import Principal, get_principal, require_roles
 
 router = APIRouter(prefix="/api/v1/workers", tags=["workers"])
@@ -53,3 +53,23 @@ def update_worker(worker_id: int, payload: WorkerUpdate, organization_id: str = 
     db.commit()
     db.refresh(worker)
     return worker
+
+documents_router = APIRouter(prefix="/api/v1/workers/{worker_id}/documents", tags=["worker-documents"])
+
+@documents_router.get("", response_model=list[DocumentRead])
+def list_documents(worker_id: int, organization_id: str = Depends(organization_scope), db: Session = Depends(get_db)):
+    if db.scalar(select(Worker).where(Worker.id == worker_id, Worker.organization_id == organization_id)) is None:
+        raise HTTPException(status_code=404, detail="Worker not found")
+    return list(db.scalars(select(WorkerDocument).where(WorkerDocument.worker_id == worker_id, WorkerDocument.organization_id == organization_id).order_by(WorkerDocument.id)).all())
+
+@documents_router.post("", response_model=DocumentRead, status_code=201)
+def create_document(worker_id: int, payload: DocumentCreate, organization_id: str = Depends(organization_scope), principal: Principal = Depends(require_roles("admin", "hr")), db: Session = Depends(get_db)):
+    if db.scalar(select(Worker).where(Worker.id == worker_id, Worker.organization_id == organization_id)) is None:
+        raise HTTPException(status_code=404, detail="Worker not found")
+    document = WorkerDocument(worker_id=worker_id, organization_id=organization_id, **payload.model_dump())
+    db.add(document)
+    db.commit()
+    db.refresh(document)
+    return document
+
+app_router = router

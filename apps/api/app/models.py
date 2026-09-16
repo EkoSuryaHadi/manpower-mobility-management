@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import DateTime, String, func
+from sqlalchemy import DateTime, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db import Base
 
@@ -10,4 +10,16 @@ class Worker(Base):
     employee_number: Mapped[str] = mapped_column(String(50), unique=True, index=True)
     full_name: Mapped[str] = mapped_column(String(160))
     status: Mapped[str] = mapped_column(String(30), default="active")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+class WorkerDocument(Base):
+    __tablename__ = "worker_documents"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    worker_id: Mapped[int] = mapped_column(ForeignKey("workers.id", ondelete="CASCADE"), index=True)
+    organization_id: Mapped[str] = mapped_column(String(80), index=True)
+    document_type: Mapped[str] = mapped_column(String(50))
+    file_name: Mapped[str] = mapped_column(String(255))
+    object_key: Mapped[str] = mapped_column(String(500), unique=True)
+    status: Mapped[str] = mapped_column(String(30), default="pending")
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
