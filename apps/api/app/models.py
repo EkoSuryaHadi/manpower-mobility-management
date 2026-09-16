@@ -44,3 +44,13 @@ class Requirement(Base):
     site: Mapped[str] = mapped_column(String(160), default="*")
     document_type: Mapped[str] = mapped_column(String(50))
     active: Mapped[bool] = mapped_column(default=True)
+
+class Approval(Base):
+    __tablename__ = "approvals"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    organization_id: Mapped[str] = mapped_column(String(80), index=True)
+    assignment_id: Mapped[int] = mapped_column(ForeignKey("assignments.id", ondelete="CASCADE"), index=True)
+    status: Mapped[str] = mapped_column(String(30), default="pending")
+    comment: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    approved_by: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

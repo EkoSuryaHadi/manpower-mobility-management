@@ -17,3 +17,5 @@ Assignment endpoints: `GET/POST /api/v1/assignments` and `PATCH /api/v1/assignme
 Readiness endpoint: `GET /api/v1/assignments/{assignment_id}/readiness`. The first readiness pass reports `ready` or `incomplete` using worker activity, assignment status, and document presence.
 
 Requirement endpoints: `GET/POST /api/v1/requirements`. Rules are scoped by organization, position, site, and required document type; admin and HR can create rules.
+
+Approval endpoints: `GET/POST /api/v1/approvals` and `PATCH /api/v1/approvals/{approval_id}`. Admin and manager can create and decide approvals; every decision records the principal user ID.

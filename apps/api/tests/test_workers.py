@@ -84,3 +84,12 @@ def test_requirement_rule_is_used_by_readiness():
     assignment = client.post("/api/v1/assignments", headers={"X-Organization-ID": "org-rule"}, json={"worker_id": worker["id"], "position": "Welder", "site": "Site C"}).json()
     response = client.get(f"/api/v1/assignments/{assignment['id']}/readiness", headers={"X-Organization-ID": "org-rule"})
     assert response.json()["reasons"] == ["missing_document:certificate"]
+
+def test_assignment_approval_workflow():
+    worker = client.post("/api/v1/workers", headers={"X-Organization-ID": "org-approval"}, json={"organization_id": "org-approval", "employee_number": "EMP-APP", "full_name": "Nia"}).json()
+    assignment = client.post("/api/v1/assignments", headers={"X-Organization-ID": "org-approval"}, json={"worker_id": worker["id"], "position": "Driver", "site": "Site D"}).json()
+    approval = client.post("/api/v1/approvals", headers={"X-Organization-ID": "org-approval"}, json={"assignment_id": assignment["id"], "comment": "Ready for review"})
+    assert approval.status_code == 201
+    decided = client.patch(f"/api/v1/approvals/{approval.json()['id']}", headers={"X-Organization-ID": "org-approval"}, json={"status": "approved"})
+    assert decided.status_code == 200
+    assert decided.json()["approved_by"] == "local-development"

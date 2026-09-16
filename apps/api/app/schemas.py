@@ -66,3 +66,19 @@ class RequirementRead(RequirementCreate):
     organization_id: str
     active: bool
     model_config = ConfigDict(from_attributes=True)
+
+class ApprovalCreate(BaseModel):
+    assignment_id: int
+    comment: str | None = Field(default=None, max_length=500)
+
+class ApprovalDecision(BaseModel):
+    status: str = Field(pattern="^(approved|rejected)$")
+    comment: str | None = Field(default=None, max_length=500)
+
+class ApprovalRead(ApprovalCreate):
+    id: int
+    organization_id: str
+    status: str
+    approved_by: str | None = None
+    created_at: datetime | None = None
+    model_config = ConfigDict(from_attributes=True)

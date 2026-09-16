@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Uploa
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.db import get_db
-from app.models import Assignment, Requirement, Worker, WorkerDocument
-from app.schemas import AssignmentCreate, AssignmentRead, AssignmentUpdate, DocumentCreate, DocumentRead, ReadinessRead, RequirementCreate, RequirementRead, WorkerCreate, WorkerRead, WorkerUpdate
+from app.models import Approval, Assignment, Requirement, Worker, WorkerDocument
+from app.schemas import ApprovalCreate, ApprovalDecision, ApprovalRead, AssignmentCreate, AssignmentRead, AssignmentUpdate, DocumentCreate, DocumentRead, ReadinessRead, RequirementCreate, RequirementRead, WorkerCreate, WorkerRead, WorkerUpdate
 from app.security import Principal, get_principal, require_roles
 from app.storage import create_download_url, upload_file
 
@@ -159,3 +159,32 @@ def create_requirement(payload: RequirementCreate, organization_id: str = Depend
     db.commit()
     db.refresh(requirement)
     return requirement
+
+approvals_router = APIRouter(prefix="/api/v1/approvals", tags=["approvals"])
+
+@approvals_router.get("", response_model=list[ApprovalRead])
+def list_approvals(organization_id: str = Depends(organization_scope), db: Session = Depends(get_db)):
+    return list(db.scalars(select(Approval).where(Approval.organization_id == organization_id).order_by(Approval.id)).all())
+
+@approvals_router.post("", response_model=ApprovalRead, status_code=201)
+def create_approval(payload: ApprovalCreate, organization_id: str = Depends(organization_scope), principal: Principal = Depends(require_roles("admin", "manager")), db: Session = Depends(get_db)):
+    assignment = db.scalar(select(Assignment).where(Assignment.id == payload.assignment_id, Assignment.organization_id == organization_id))
+    if assignment is None:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    approval = Approval(organization_id=organization_id, **payload.model_dump())
+    db.add(approval)
+    db.commit()
+    db.refresh(approval)
+    return approval
+
+@approvals_router.patch("/{approval_id}", response_model=ApprovalRead)
+def decide_approval(approval_id: int, payload: ApprovalDecision, organization_id: str = Depends(organization_scope), principal: Principal = Depends(require_roles("admin", "manager")), db: Session = Depends(get_db)):
+    approval = db.scalar(select(Approval).where(Approval.id == approval_id, Approval.organization_id == organization_id))
+    if approval is None:
+        raise HTTPException(status_code=404, detail="Approval not found")
+    approval.status = payload.status
+    approval.comment = payload.comment
+    approval.approved_by = principal.user_id
+    db.commit()
+    db.refresh(approval)
+    return approval
