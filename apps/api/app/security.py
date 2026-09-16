@@ -28,3 +28,10 @@ def get_principal(credentials: HTTPAuthorizationCredentials | None = Depends(bea
     if not user_id:
         raise HTTPException(status_code=401, detail="Token subject is missing")
     return Principal(user_id=user_id, organization_id=claims.get("organization_id"), role=claims.get("role", "worker"))
+
+def require_roles(*allowed_roles: str):
+    def role_guard(principal: Principal = Depends(get_principal)) -> Principal:
+        if principal.role not in allowed_roles:
+            raise HTTPException(status_code=403, detail="Insufficient role permissions")
+        return principal
+    return role_guard
