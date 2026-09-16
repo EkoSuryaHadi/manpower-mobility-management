@@ -48,3 +48,10 @@ class AssignmentRead(AssignmentCreate):
     status: str
     created_at: datetime | None = None
     model_config = ConfigDict(from_attributes=True)
+
+class ReadinessRead(BaseModel):
+    assignment_id: int
+    status: str
+    ready: bool
+    reasons: list[str]
+    document_count: int

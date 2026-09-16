@@ -26,3 +26,4 @@ Worker records currently expose employee_number, full_name, status, and created_
 - Private document download now has a presigned URL boundary with a five-minute expiry; storage credentials remain server-side.
 - Private document upload now validates PDF/JPEG/PNG content types and creates organization-scoped object keys before metadata persistence.
 - Assignment Management now supports organization-scoped creation for active workers and lifecycle updates from draft through demobilized.
+- Readiness Engine v1 now reports missing documents and invalid worker/assignment state for an assignment.

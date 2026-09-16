@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import Assignment, Worker, WorkerDocument
-from app.schemas import AssignmentCreate, AssignmentRead, AssignmentUpdate, DocumentCreate, DocumentRead, WorkerCreate, WorkerRead, WorkerUpdate
+from app.schemas import AssignmentCreate, AssignmentRead, AssignmentUpdate, DocumentCreate, DocumentRead, ReadinessRead, WorkerCreate, WorkerRead, WorkerUpdate
 from app.security import Principal, get_principal, require_roles
 from app.storage import create_download_url, upload_file
 
@@ -124,3 +124,19 @@ def update_assignment(assignment_id: int, payload: AssignmentUpdate, organizatio
     db.commit()
     db.refresh(assignment)
     return assignment
+
+@assignments_router.get("/{assignment_id}/readiness", response_model=ReadinessRead)
+def assignment_readiness(assignment_id: int, organization_id: str = Depends(organization_scope), db: Session = Depends(get_db)):
+    assignment = db.scalar(select(Assignment).where(Assignment.id == assignment_id, Assignment.organization_id == organization_id))
+    if assignment is None:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    worker = db.get(Worker, assignment.worker_id)
+    documents = list(db.scalars(select(WorkerDocument).where(WorkerDocument.worker_id == assignment.worker_id, WorkerDocument.organization_id == organization_id)).all())
+    reasons: list[str] = []
+    if worker is None or worker.status != "active":
+        reasons.append("worker_inactive")
+    if assignment.status not in {"draft", "submitted", "approved"}:
+        reasons.append("assignment_not_ready_for_precheck")
+    if not documents:
+        reasons.append("no_documents")
+    return {"assignment_id": assignment.id, "status": "ready" if not reasons else "incomplete", "ready": not reasons, "reasons": reasons, "document_count": len(documents)}

@@ -68,3 +68,11 @@ def test_assignment_lifecycle_starts_with_active_worker():
     updated = client.patch(f"/api/v1/assignments/{assignment_id}", headers={"X-Organization-ID": "org-assignment"}, json={"status": "approved"})
     assert updated.status_code == 200
     assert updated.json()["status"] == "approved"
+
+def test_assignment_readiness_reports_missing_documents():
+    worker = client.post("/api/v1/workers", headers={"X-Organization-ID": "org-ready"}, json={"organization_id": "org-ready", "employee_number": "EMP-READY", "full_name": "Lina"}).json()
+    assignment = client.post("/api/v1/assignments", headers={"X-Organization-ID": "org-ready"}, json={"worker_id": worker["id"], "position": "Operator", "site": "Site B"}).json()
+    response = client.get(f"/api/v1/assignments/{assignment['id']}/readiness", headers={"X-Organization-ID": "org-ready"})
+    assert response.status_code == 200
+    assert response.json()["status"] == "incomplete"
+    assert "no_documents" in response.json()["reasons"]
