@@ -10,3 +10,7 @@ class WorkerRead(WorkerCreate):
     status: str
     created_at: datetime | None = None
     model_config = ConfigDict(from_attributes=True)
+
+class WorkerUpdate(BaseModel):
+    full_name: str | None = Field(default=None, min_length=1, max_length=160)
+    status: str | None = Field(default=None, pattern="^(active|inactive)$")

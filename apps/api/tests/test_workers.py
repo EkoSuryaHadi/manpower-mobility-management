@@ -23,3 +23,14 @@ def test_create_and_list_worker():
     listed = client.get("/api/v1/workers")
     assert listed.status_code == 200
     assert listed.json()[0]["employee_number"] == "EMP-001"
+
+def test_update_and_get_worker():
+    created = client.post("/api/v1/workers", json={"employee_number": "EMP-002", "full_name": "Budi"})
+    worker_id = created.json()["id"]
+    updated = client.patch(f"/api/v1/workers/{worker_id}", json={"status": "inactive", "full_name": "Budi Santoso"})
+    assert updated.status_code == 200
+    assert updated.json()["status"] == "inactive"
+    assert client.get(f"/api/v1/workers/{worker_id}").json()["full_name"] == "Budi Santoso"
+
+def test_missing_worker_returns_404():
+    assert client.get("/api/v1/workers/99999").status_code == 404
