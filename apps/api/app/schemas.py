@@ -2,6 +2,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 class WorkerCreate(BaseModel):
+    organization_id: str = Field(min_length=1, max_length=80)
     employee_number: str = Field(min_length=1, max_length=50)
     full_name: str = Field(min_length=1, max_length=160)
 

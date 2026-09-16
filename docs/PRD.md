@@ -18,3 +18,4 @@ Worker records currently expose employee_number, full_name, status, and created_
 - FastAPI remains the authority for authorization and business rules.
 - Worker documents will use private object storage and signed URLs after permission checks.
 - Worker status supports active and inactive; inactive workers cannot be selected for new assignments.
+- Worker endpoints require an `X-Organization-ID` scope header during the current transition to authenticated Supabase users. The payload organization must match the request scope.

@@ -14,13 +14,16 @@ def upgrade():
     op.create_table(
         "workers",
         sa.Column("id", sa.Integer(), primary_key=True),
+        sa.Column("organization_id", sa.String(length=80), nullable=False),
         sa.Column("employee_number", sa.String(length=50), nullable=False),
         sa.Column("full_name", sa.String(length=160), nullable=False),
         sa.Column("status", sa.String(length=30), nullable=False, server_default="active"),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
     )
+    op.create_index("ix_workers_organization_id", "workers", ["organization_id"])
     op.create_index("ix_workers_employee_number", "workers", ["employee_number"], unique=True)
 
 def downgrade():
+    op.drop_index("ix_workers_organization_id", table_name="workers")
     op.drop_index("ix_workers_employee_number", table_name="workers")
     op.drop_table("workers")
