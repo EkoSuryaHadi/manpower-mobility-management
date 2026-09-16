@@ -11,6 +11,11 @@ class Settings(BaseSettings):
     supabase_jwt_audience: str = "authenticated"
     supabase_jwt_secret: str = ""
     auth_enforced: bool = False
+    storage_bucket: str = ""
+    storage_endpoint_url: str = ""
+    storage_access_key: str = ""
+    storage_secret_key: str = ""
+    storage_region: str = "auto"
     model_config = SettingsConfigDict(
         env_file=Path(__file__).resolve().parents[4] / ".env", extra="ignore"
     )

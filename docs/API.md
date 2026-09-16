@@ -7,3 +7,5 @@ Worker endpoints use the authenticated token's organization claim when auth is e
 Worker permissions: `admin` and `hr` may create and update workers; `admin`, `hr`, `manager`, and `worker` may read workers within their organization. The local development principal uses the `admin` role.
 
 Document metadata endpoints: `GET/POST /api/v1/workers/{worker_id}/documents`. The API stores a private `object_key`; signed URL generation and actual object upload depend on the configured private storage provider.
+
+Download endpoint: `GET /api/v1/workers/{worker_id}/documents/{document_id}/download`. It returns a five-minute presigned URL after organization checks. Configure the S3-compatible bucket variables before using it.

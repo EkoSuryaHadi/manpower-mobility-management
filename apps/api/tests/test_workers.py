@@ -48,3 +48,9 @@ def test_worker_document_metadata_is_scoped():
     response = client.post(f"/api/v1/workers/{worker['id']}/documents", headers={"X-Organization-ID": "org-doc"}, json={"document_type": "passport", "file_name": "passport.pdf", "object_key": "org-doc/workers/1/passport.pdf"})
     assert response.status_code == 201
     assert client.get(f"/api/v1/workers/{worker['id']}/documents", headers={"X-Organization-ID": "org-doc"}).json()[0]["document_type"] == "passport"
+
+def test_download_requires_private_storage_configuration():
+    worker = client.post("/api/v1/workers", headers={"X-Organization-ID": "org-download"}, json={"organization_id": "org-download", "employee_number": "EMP-DL", "full_name": "Rina"}).json()
+    document = client.post(f"/api/v1/workers/{worker['id']}/documents", headers={"X-Organization-ID": "org-download"}, json={"document_type": "id", "file_name": "id.pdf", "object_key": "org-download/id.pdf"}).json()
+    response = client.get(f"/api/v1/workers/{worker['id']}/documents/{document['id']}/download", headers={"X-Organization-ID": "org-download"})
+    assert response.status_code == 503

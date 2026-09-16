@@ -5,6 +5,7 @@ from app.db import get_db
 from app.models import Worker, WorkerDocument
 from app.schemas import DocumentCreate, DocumentRead, WorkerCreate, WorkerRead, WorkerUpdate
 from app.security import Principal, get_principal, require_roles
+from app.storage import create_download_url
 
 router = APIRouter(prefix="/api/v1/workers", tags=["workers"])
 
@@ -71,5 +72,12 @@ def create_document(worker_id: int, payload: DocumentCreate, organization_id: st
     db.commit()
     db.refresh(document)
     return document
+
+@documents_router.get("/{document_id}/download")
+def download_document(worker_id: int, document_id: int, organization_id: str = Depends(organization_scope), db: Session = Depends(get_db)):
+    document = db.scalar(select(WorkerDocument).where(WorkerDocument.id == document_id, WorkerDocument.worker_id == worker_id, WorkerDocument.organization_id == organization_id))
+    if document is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return {"url": create_download_url(document.object_key), "expires_in": 300}
 
 app_router = router
