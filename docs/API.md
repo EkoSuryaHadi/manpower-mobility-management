@@ -23,3 +23,5 @@ Approval endpoints: `GET/POST /api/v1/approvals` and `PATCH /api/v1/approvals/{a
 Mobilization endpoints: `GET/POST /api/v1/mobilizations` and `PATCH /api/v1/mobilizations/{mobilization_id}`. Statuses are `planned`, `departed`, `arrived`, and `cancelled`.
 
 Demobilization endpoints: `GET/POST /api/v1/demobilizations` and `PATCH /api/v1/demobilizations/{demobilization_id}`. Statuses are `planned`, `returned`, and `cancelled`; returning an item closes its assignment as `demobilized`.
+
+Operations endpoints: `GET /api/v1/dashboard`, `GET /api/v1/audit-events`, and `GET /api/v1/reports/assignments.csv`.

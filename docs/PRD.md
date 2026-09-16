@@ -31,3 +31,4 @@ Worker records currently expose employee_number, full_name, status, and created_
 - Approval Workflow v1 now supports pending, approved, and rejected decisions linked to assignments with comments and approver identity.
 - Mobilization v1 now records assignment departure, arrival, notes, and operational status.
 - Demobilization v1 now records worker return and closes the related assignment when status becomes returned.
+- Operations dashboard, assignment CSV export, and organization-scoped audit events are now available.

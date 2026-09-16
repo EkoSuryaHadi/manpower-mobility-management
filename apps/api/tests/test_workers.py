@@ -111,3 +111,15 @@ def test_demobilization_closes_assignment():
     updated = client.patch(f"/api/v1/demobilizations/{created.json()['id']}", headers={"X-Organization-ID": "org-demo"}, json={"status": "returned"})
     assert updated.status_code == 200
     assert client.get("/api/v1/assignments", headers={"X-Organization-ID": "org-demo"}).json()[0]["status"] == "demobilized"
+
+def test_dashboard_audit_and_assignment_report():
+    headers = {"X-Organization-ID": "org-report"}
+    worker = client.post("/api/v1/workers", headers=headers, json={"organization_id": "org-report", "employee_number": "EMP-REP", "full_name": "Rudi"}).json()
+    client.post("/api/v1/assignments", headers=headers, json={"worker_id": worker["id"], "position": "Supervisor", "site": "Site G"})
+    dashboard = client.get("/api/v1/dashboard", headers=headers)
+    assert dashboard.status_code == 200
+    assert dashboard.json()["workers"] == 1
+    assert client.get("/api/v1/audit-events", headers=headers).json()[0]["entity_type"] == "assignment"
+    report = client.get("/api/v1/reports/assignments.csv", headers=headers)
+    assert report.status_code == 200
+    assert "Supervisor,Site G" in report.text

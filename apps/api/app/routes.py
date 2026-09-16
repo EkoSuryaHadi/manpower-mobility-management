@@ -1,13 +1,17 @@
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
-from sqlalchemy import select
+from fastapi.responses import StreamingResponse
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from app.db import get_db
-from app.models import Approval, Assignment, Demobilization, Mobilization, Requirement, Worker, WorkerDocument
-from app.schemas import ApprovalCreate, ApprovalDecision, ApprovalRead, AssignmentCreate, AssignmentRead, AssignmentUpdate, DemobilizationCreate, DemobilizationRead, DemobilizationUpdate, DocumentCreate, DocumentRead, MobilizationCreate, MobilizationRead, MobilizationUpdate, ReadinessRead, RequirementCreate, RequirementRead, WorkerCreate, WorkerRead, WorkerUpdate
+from app.models import Approval, Assignment, AuditEvent, Demobilization, Mobilization, Requirement, Worker, WorkerDocument
+from app.schemas import ApprovalCreate, ApprovalDecision, ApprovalRead, AssignmentCreate, AssignmentRead, AssignmentUpdate, AuditEventRead, DashboardRead, DemobilizationCreate, DemobilizationRead, DemobilizationUpdate, DocumentCreate, DocumentRead, MobilizationCreate, MobilizationRead, MobilizationUpdate, ReadinessRead, RequirementCreate, RequirementRead, WorkerCreate, WorkerRead, WorkerUpdate
 from app.security import Principal, get_principal, require_roles
 from app.storage import create_download_url, upload_file
 
 router = APIRouter(prefix="/api/v1/workers", tags=["workers"])
+
+def record_audit(db: Session, organization_id: str, principal: Principal, action: str, entity_type: str, entity_id: int) -> None:
+    db.add(AuditEvent(organization_id=organization_id, actor_id=principal.user_id, action=action, entity_type=entity_type, entity_id=str(entity_id)))
 
 def organization_scope(
     principal: Principal = Depends(get_principal),
@@ -33,6 +37,8 @@ def create_worker(payload: WorkerCreate, organization_id: str = Depends(organiza
         raise HTTPException(status_code=409, detail="Employee number already exists")
     worker = Worker(**payload.model_dump())
     db.add(worker)
+    db.flush()
+    record_audit(db, organization_id, principal, "created", "worker", worker.id)
     db.commit()
     db.refresh(worker)
     return worker
@@ -51,6 +57,7 @@ def update_worker(worker_id: int, payload: WorkerUpdate, organization_id: str = 
         raise HTTPException(status_code=404, detail="Worker not found")
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(worker, field, value)
+    record_audit(db, organization_id, principal, "updated", "worker", worker.id)
     db.commit()
     db.refresh(worker)
     return worker
@@ -110,6 +117,8 @@ def create_assignment(payload: AssignmentCreate, organization_id: str = Depends(
         raise HTTPException(status_code=404, detail="Active worker not found")
     assignment = Assignment(organization_id=organization_id, **payload.model_dump())
     db.add(assignment)
+    db.flush()
+    record_audit(db, organization_id, principal, "created", "assignment", assignment.id)
     db.commit()
     db.refresh(assignment)
     return assignment
@@ -121,6 +130,7 @@ def update_assignment(assignment_id: int, payload: AssignmentUpdate, organizatio
         raise HTTPException(status_code=404, detail="Assignment not found")
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(assignment, field, value)
+    record_audit(db, organization_id, principal, "updated", "assignment", assignment.id)
     db.commit()
     db.refresh(assignment)
     return assignment
@@ -185,6 +195,7 @@ def decide_approval(approval_id: int, payload: ApprovalDecision, organization_id
     approval.status = payload.status
     approval.comment = payload.comment
     approval.approved_by = principal.user_id
+    record_audit(db, organization_id, principal, payload.status, "approval", approval.id)
     db.commit()
     db.refresh(approval)
     return approval
@@ -248,3 +259,30 @@ def update_demobilization(demobilization_id: int, payload: DemobilizationUpdate,
     db.commit()
     db.refresh(record)
     return record
+
+operations_router = APIRouter(prefix="/api/v1", tags=["operations"])
+
+@operations_router.get("/dashboard", response_model=DashboardRead)
+def dashboard(organization_id: str = Depends(organization_scope), db: Session = Depends(get_db)):
+    return {
+        "workers": db.scalar(select(func.count()).select_from(Worker).where(Worker.organization_id == organization_id)) or 0,
+        "active_workers": db.scalar(select(func.count()).select_from(Worker).where(Worker.organization_id == organization_id, Worker.status == "active")) or 0,
+        "assignments": db.scalar(select(func.count()).select_from(Assignment).where(Assignment.organization_id == organization_id)) or 0,
+        "pending_approvals": db.scalar(select(func.count()).select_from(Approval).where(Approval.organization_id == organization_id, Approval.status == "pending")) or 0,
+        "active_mobilizations": db.scalar(select(func.count()).select_from(Mobilization).where(Mobilization.organization_id == organization_id, Mobilization.status.in_(["planned", "departed"]))) or 0,
+    }
+
+@operations_router.get("/audit-events", response_model=list[AuditEventRead])
+def audit_events(organization_id: str = Depends(organization_scope), principal: Principal = Depends(require_roles("admin", "hr", "manager")), db: Session = Depends(get_db)):
+    return list(db.scalars(select(AuditEvent).where(AuditEvent.organization_id == organization_id).order_by(AuditEvent.id.desc()).limit(100)).all())
+
+@operations_router.get("/reports/assignments.csv")
+def assignments_report(organization_id: str = Depends(organization_scope), db: Session = Depends(get_db)):
+    import csv
+    import io
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["id", "worker_id", "position", "site", "status"])
+    for item in db.scalars(select(Assignment).where(Assignment.organization_id == organization_id).order_by(Assignment.id)):
+        writer.writerow([item.id, item.worker_id, item.position, item.site, item.status])
+    return StreamingResponse(iter([output.getvalue()]), media_type="text/csv", headers={"Content-Disposition": "attachment; filename=assignments.csv"})

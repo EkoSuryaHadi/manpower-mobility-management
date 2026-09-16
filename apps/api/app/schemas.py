@@ -118,3 +118,19 @@ class DemobilizationRead(DemobilizationCreate):
     status: str
     created_at: datetime | None = None
     model_config = ConfigDict(from_attributes=True)
+
+class DashboardRead(BaseModel):
+    workers: int
+    active_workers: int
+    assignments: int
+    pending_approvals: int
+    active_mobilizations: int
+
+class AuditEventRead(BaseModel):
+    id: int
+    actor_id: str
+    action: str
+    entity_type: str
+    entity_id: str
+    created_at: datetime | None = None
+    model_config = ConfigDict(from_attributes=True)
