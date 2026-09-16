@@ -21,4 +21,6 @@ Verify with `python -m pytest -q` from `apps/api` and `npm run build` from `apps
 
 Health: `http://localhost:8000/api/v1/health` · API docs: `http://localhost:8000/docs` · Web: `http://localhost:3000`
 
+Supabase variables are included as empty placeholders in the examples. Authentication is the next Phase 1 task and is not enabled yet.
+
 Sprint 0 intentionally establishes only the runnable foundation; domain models and authentication follow in Sprint 1.

@@ -6,5 +6,4 @@ Monorepo, local PostgreSQL, Next.js and FastAPI baselines, health checks, enviro
 
 ## Sprint 1 — Identity and worker registry
 
-Supabase Auth, organization-scoped roles, worker CRUD, and document metadata.
-
+Worker CRUD and status lifecycle are complete. Remaining work: Supabase Auth, organization-scoped roles, worker profile UI, and document metadata.

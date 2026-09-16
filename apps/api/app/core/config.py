@@ -6,6 +6,9 @@ class Settings(BaseSettings):
     app_env: str = "development"
     database_url: str = "postgresql+psycopg://manpower:manpower_dev@localhost:5432/manpower"
     cors_origins: str = "http://localhost:3000"
+    supabase_url: str = ""
+    supabase_anon_key: str = ""
+    supabase_jwt_audience: str = "authenticated"
     model_config = SettingsConfigDict(
         env_file=Path(__file__).resolve().parents[4] / ".env", extra="ignore"
     )
