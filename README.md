@@ -23,4 +23,6 @@ Health: `http://localhost:8000/api/v1/health` · API docs: `http://localhost:800
 
 Supabase variables are included as empty placeholders in the examples. Authentication is the next Phase 1 task and is not enabled yet.
 
+Worker Registry UI: `http://localhost:3000/workers`
+
 Sprint 0 intentionally establishes only the runnable foundation; domain models and authentication follow in Sprint 1.

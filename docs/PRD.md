@@ -21,3 +21,4 @@ Worker records currently expose employee_number, full_name, status, and created_
 - Worker endpoints require an `X-Organization-ID` scope header during the current transition to authenticated Supabase users. The payload organization must match the request scope.
 - Supabase JWT validation is now scaffolded with audience and role claims; enforcement is enabled by setting `AUTH_ENFORCED=true` and providing `SUPABASE_JWT_SECRET`. When enabled, the token organization claim is authoritative for Worker Registry access.
 - Worker Registry write permissions are restricted to `admin` and `hr`; read permissions are available to all four planned roles within organization scope.
+- Worker Registry now has a first frontend screen with local organization scope, list loading, and worker creation form.
