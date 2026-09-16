@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     app_env: str = "development"
-    database_url: str = "postgresql+psycopg://manpower:manpower_dev@localhost:5432/manpower"
+    database_url: str = "postgresql+psycopg://manpower:manpower_dev@localhost:55432/manpower"
     cors_origins: str = "http://localhost:3000"
     supabase_url: str = ""
     supabase_anon_key: str = ""

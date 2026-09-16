@@ -11,7 +11,7 @@ Monorepo foundation for worker readiness, assignment, approval, mobilization, an
 
 ## Local setup
 
-Requires Node.js 22+ and Python 3.11+. Copy root `.env.example` to `.env`, then run `docker compose up -d postgres` (or `podman compose up -d postgres`).
+Requires Node.js 22+ and Python 3.11+. Copy root `.env.example` to `.env`, then run `docker compose up -d postgres` (or `podman compose up -d postgres`). PostgreSQL is exposed on host port `55432` to avoid conflicts with an existing local database.
 
 From `apps/api`, create a virtual environment with `python -m venv .venv`, activate it, and run `python -m pip install -e ".[dev]"`. Start the API with `python -m uvicorn app.main:app --reload --port 8000`. API settings read the root `.env`; environment variables take precedence.
 
