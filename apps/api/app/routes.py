@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import Worker, WorkerDocument
 from app.schemas import DocumentCreate, DocumentRead, WorkerCreate, WorkerRead, WorkerUpdate
 from app.security import Principal, get_principal, require_roles
-from app.storage import create_download_url
+from app.storage import create_download_url, upload_file
 
 router = APIRouter(prefix="/api/v1/workers", tags=["workers"])
 
@@ -79,5 +79,20 @@ def download_document(worker_id: int, document_id: int, organization_id: str = D
     if document is None:
         raise HTTPException(status_code=404, detail="Document not found")
     return {"url": create_download_url(document.object_key), "expires_in": 300}
+
+@documents_router.post("/upload", response_model=DocumentRead, status_code=201)
+def upload_document(worker_id: int, document_type: str = Form(...), file: UploadFile = File(...), organization_id: str = Depends(organization_scope), principal: Principal = Depends(require_roles("admin", "hr")), db: Session = Depends(get_db)):
+    if db.scalar(select(Worker).where(Worker.id == worker_id, Worker.organization_id == organization_id)) is None:
+        raise HTTPException(status_code=404, detail="Worker not found")
+    allowed_types = {"application/pdf", "image/jpeg", "image/png"}
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=415, detail="Only PDF, JPEG, and PNG files are supported")
+    object_key = f"{organization_id}/workers/{worker_id}/documents/{file.filename}"
+    upload_file(file.file, object_key, file.content_type)
+    document = WorkerDocument(worker_id=worker_id, organization_id=organization_id, document_type=document_type, file_name=file.filename or "upload", object_key=object_key, status="uploaded")
+    db.add(document)
+    db.commit()
+    db.refresh(document)
+    return document
 
 app_router = router

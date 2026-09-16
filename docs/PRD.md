@@ -24,3 +24,4 @@ Worker records currently expose employee_number, full_name, status, and created_
 - Worker Registry now has a first frontend screen with local organization scope, list loading, and worker creation form.
 - Worker document metadata endpoints now store document type, name, private object key, expiry, and status under the worker organization scope.
 - Private document download now has a presigned URL boundary with a five-minute expiry; storage credentials remain server-side.
+- Private document upload now validates PDF/JPEG/PNG content types and creates organization-scoped object keys before metadata persistence.

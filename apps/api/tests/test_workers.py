@@ -54,3 +54,8 @@ def test_download_requires_private_storage_configuration():
     document = client.post(f"/api/v1/workers/{worker['id']}/documents", headers={"X-Organization-ID": "org-download"}, json={"document_type": "id", "file_name": "id.pdf", "object_key": "org-download/id.pdf"}).json()
     response = client.get(f"/api/v1/workers/{worker['id']}/documents/{document['id']}/download", headers={"X-Organization-ID": "org-download"})
     assert response.status_code == 503
+
+def test_upload_rejects_unsupported_file_type():
+    worker = client.post("/api/v1/workers", headers={"X-Organization-ID": "org-upload"}, json={"organization_id": "org-upload", "employee_number": "EMP-UP", "full_name": "Tono"}).json()
+    response = client.post(f"/api/v1/workers/{worker['id']}/documents/upload", headers={"X-Organization-ID": "org-upload"}, data={"document_type": "id"}, files={"file": ("script.exe", b"bad", "application/octet-stream")})
+    assert response.status_code == 415
