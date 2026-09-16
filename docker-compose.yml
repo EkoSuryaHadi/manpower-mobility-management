@@ -9,6 +9,20 @@ services:
     volumes: [postgres_data:/var/lib/postgresql/data]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-manpower} -d ${POSTGRES_DB:-manpower}"]
+  api:
+    build: ./apps/api
+    environment:
+      DATABASE_URL: postgresql+psycopg://manpower:manpower_dev@postgres:5432/manpower
+      CORS_ORIGINS: http://localhost:3000
+    ports: ["8000:8000"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+  web:
+    build: ./apps/web
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://api:8000
+    ports: ["3000:3000"]
+    depends_on: [api]
 volumes:
   postgres_data:
-

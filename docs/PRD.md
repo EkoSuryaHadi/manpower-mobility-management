@@ -32,3 +32,8 @@ Worker records currently expose employee_number, full_name, status, and created_
 - Mobilization v1 now records assignment departure, arrival, notes, and operational status.
 - Demobilization v1 now records worker return and closes the related assignment when status becomes returned.
 - Operations dashboard, assignment CSV export, and organization-scoped audit events are now available.
+- Frontend now includes Supabase email/password sign-in, operational dashboard metrics, worker navigation, and assignment report download.
+- Authenticated frontend requests now forward the Supabase access token and organization metadata; local development falls back to `local-org` when Supabase is not configured.
+- Frontend now exposes assignment creation/listing and approval decision queues in addition to Worker Registry and dashboard.
+- Production baseline now includes API/web container images, CI tests/builds, database readiness checks, and mandatory authentication validation in production.
+- Frontend dependency audit is clean on Next.js 16.3.5; production deployment still requires real Supabase and private storage credentials.

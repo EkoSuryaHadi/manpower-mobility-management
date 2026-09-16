@@ -25,4 +25,8 @@ Supabase variables are included as empty placeholders in the examples. Authentic
 
 Worker Registry UI: `http://localhost:3000/workers`
 
+Operational UI: `/dashboard`, `/assignments`, `/approvals`, and `/login`. GitHub Actions runs backend tests and the frontend production build on pushes and pull requests.
+
+Before production, set Supabase, JWT, and private storage variables and run the Alembic migrations against PostgreSQL.
+
 Sprint 0 intentionally establishes only the runnable foundation; domain models and authentication follow in Sprint 1.

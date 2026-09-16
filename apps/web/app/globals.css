@@ -3,3 +3,4 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+nav{display:flex;gap:1.25rem;padding:1.2rem 2rem;border-bottom:1px solid var(--line)}nav a{font-size:.85rem}.narrow{max-width:680px}.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);margin-top:4rem;border:1px solid var(--line)}.metric{background:var(--paper);padding:1.5rem}.metric strong{display:block;font-family:'Space Grotesk',sans-serif;font-size:2.5rem}.metric span{color:var(--muted);font-size:.85rem}

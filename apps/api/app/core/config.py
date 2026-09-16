@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -22,6 +23,12 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [item.strip() for item in self.cors_origins.split(",") if item.strip()]
+
+    @model_validator(mode="after")
+    def production_security(self):
+        if self.app_env == "production" and (not self.auth_enforced or not self.supabase_jwt_secret):
+            raise ValueError("Production requires AUTH_ENFORCED=true and SUPABASE_JWT_SECRET")
+        return self
 
 @lru_cache
 def get_settings() -> Settings:
