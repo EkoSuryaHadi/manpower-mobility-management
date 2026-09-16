@@ -19,3 +19,5 @@ Readiness endpoint: `GET /api/v1/assignments/{assignment_id}/readiness`. The fir
 Requirement endpoints: `GET/POST /api/v1/requirements`. Rules are scoped by organization, position, site, and required document type; admin and HR can create rules.
 
 Approval endpoints: `GET/POST /api/v1/approvals` and `PATCH /api/v1/approvals/{approval_id}`. Admin and manager can create and decide approvals; every decision records the principal user ID.
+
+Mobilization endpoints: `GET/POST /api/v1/mobilizations` and `PATCH /api/v1/mobilizations/{mobilization_id}`. Statuses are `planned`, `departed`, `arrived`, and `cancelled`.

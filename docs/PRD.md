@@ -29,3 +29,4 @@ Worker records currently expose employee_number, full_name, status, and created_
 - Readiness Engine v1 now reports missing documents and invalid worker/assignment state for an assignment.
 - Requirement Master v1 now stores active document rules per organization, position, and site; readiness reports missing required document types.
 - Approval Workflow v1 now supports pending, approved, and rejected decisions linked to assignments with comments and approver identity.
+- Mobilization v1 now records assignment departure, arrival, notes, and operational status.

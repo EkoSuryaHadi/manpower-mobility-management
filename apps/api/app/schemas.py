@@ -82,3 +82,22 @@ class ApprovalRead(ApprovalCreate):
     approved_by: str | None = None
     created_at: datetime | None = None
     model_config = ConfigDict(from_attributes=True)
+
+class MobilizationCreate(BaseModel):
+    assignment_id: int
+    departure_at: datetime | None = None
+    arrival_at: datetime | None = None
+    notes: str | None = Field(default=None, max_length=500)
+
+class MobilizationUpdate(BaseModel):
+    status: str = Field(pattern="^(planned|departed|arrived|cancelled)$")
+    departure_at: datetime | None = None
+    arrival_at: datetime | None = None
+    notes: str | None = Field(default=None, max_length=500)
+
+class MobilizationRead(MobilizationCreate):
+    id: int
+    organization_id: str
+    status: str
+    created_at: datetime | None = None
+    model_config = ConfigDict(from_attributes=True)

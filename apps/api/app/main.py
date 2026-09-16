@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
-from app.routes import approvals_router, assignments_router, documents_router, requirements_router, router as worker_router
+from app.routes import approvals_router, assignments_router, documents_router, mobilizations_router, requirements_router, router as worker_router
 
 settings = get_settings()
 app = FastAPI(title="Manpower Mobility Management API", version="0.1.0")
@@ -11,6 +11,7 @@ app.include_router(documents_router)
 app.include_router(assignments_router)
 app.include_router(requirements_router)
 app.include_router(approvals_router)
+app.include_router(mobilizations_router)
 
 @app.get("/api/v1/health", tags=["system"])
 def health() -> dict[str, str]:

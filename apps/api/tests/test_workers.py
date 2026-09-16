@@ -93,3 +93,12 @@ def test_assignment_approval_workflow():
     decided = client.patch(f"/api/v1/approvals/{approval.json()['id']}", headers={"X-Organization-ID": "org-approval"}, json={"status": "approved"})
     assert decided.status_code == 200
     assert decided.json()["approved_by"] == "local-development"
+
+def test_mobilization_lifecycle():
+    worker = client.post("/api/v1/workers", headers={"X-Organization-ID": "org-mob"}, json={"organization_id": "org-mob", "employee_number": "EMP-MOB", "full_name": "Fajar"}).json()
+    assignment = client.post("/api/v1/assignments", headers={"X-Organization-ID": "org-mob"}, json={"worker_id": worker["id"], "position": "Technician", "site": "Site E"}).json()
+    created = client.post("/api/v1/mobilizations", headers={"X-Organization-ID": "org-mob"}, json={"assignment_id": assignment["id"], "notes": "Morning departure"})
+    assert created.status_code == 201
+    updated = client.patch(f"/api/v1/mobilizations/{created.json()['id']}", headers={"X-Organization-ID": "org-mob"}, json={"status": "departed"})
+    assert updated.status_code == 200
+    assert updated.json()["status"] == "departed"
