@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Uploa
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.db import get_db
-from app.models import Approval, Assignment, Mobilization, Requirement, Worker, WorkerDocument
-from app.schemas import ApprovalCreate, ApprovalDecision, ApprovalRead, AssignmentCreate, AssignmentRead, AssignmentUpdate, DocumentCreate, DocumentRead, MobilizationCreate, MobilizationRead, MobilizationUpdate, ReadinessRead, RequirementCreate, RequirementRead, WorkerCreate, WorkerRead, WorkerUpdate
+from app.models import Approval, Assignment, Demobilization, Mobilization, Requirement, Worker, WorkerDocument
+from app.schemas import ApprovalCreate, ApprovalDecision, ApprovalRead, AssignmentCreate, AssignmentRead, AssignmentUpdate, DemobilizationCreate, DemobilizationRead, DemobilizationUpdate, DocumentCreate, DocumentRead, MobilizationCreate, MobilizationRead, MobilizationUpdate, ReadinessRead, RequirementCreate, RequirementRead, WorkerCreate, WorkerRead, WorkerUpdate
 from app.security import Principal, get_principal, require_roles
 from app.storage import create_download_url, upload_file
 
@@ -216,3 +216,35 @@ def update_mobilization(mobilization_id: int, payload: MobilizationUpdate, organ
     db.commit()
     db.refresh(mobilization)
     return mobilization
+
+demobilizations_router = APIRouter(prefix="/api/v1/demobilizations", tags=["demobilizations"])
+
+@demobilizations_router.get("", response_model=list[DemobilizationRead])
+def list_demobilizations(organization_id: str = Depends(organization_scope), db: Session = Depends(get_db)):
+    return list(db.scalars(select(Demobilization).where(Demobilization.organization_id == organization_id).order_by(Demobilization.id)).all())
+
+@demobilizations_router.post("", response_model=DemobilizationRead, status_code=201)
+def create_demobilization(payload: DemobilizationCreate, organization_id: str = Depends(organization_scope), principal: Principal = Depends(require_roles("admin", "hr", "manager")), db: Session = Depends(get_db)):
+    assignment = db.scalar(select(Assignment).where(Assignment.id == payload.assignment_id, Assignment.organization_id == organization_id))
+    if assignment is None:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    record = Demobilization(organization_id=organization_id, **payload.model_dump())
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return record
+
+@demobilizations_router.patch("/{demobilization_id}", response_model=DemobilizationRead)
+def update_demobilization(demobilization_id: int, payload: DemobilizationUpdate, organization_id: str = Depends(organization_scope), principal: Principal = Depends(require_roles("admin", "hr", "manager")), db: Session = Depends(get_db)):
+    record = db.scalar(select(Demobilization).where(Demobilization.id == demobilization_id, Demobilization.organization_id == organization_id))
+    if record is None:
+        raise HTTPException(status_code=404, detail="Demobilization not found")
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(record, field, value)
+    if payload.status == "returned":
+        assignment = db.get(Assignment, record.assignment_id)
+        if assignment:
+            assignment.status = "demobilized"
+    db.commit()
+    db.refresh(record)
+    return record

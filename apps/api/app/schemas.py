@@ -101,3 +101,20 @@ class MobilizationRead(MobilizationCreate):
     status: str
     created_at: datetime | None = None
     model_config = ConfigDict(from_attributes=True)
+
+class DemobilizationCreate(BaseModel):
+    assignment_id: int
+    returned_at: datetime | None = None
+    notes: str | None = Field(default=None, max_length=500)
+
+class DemobilizationUpdate(BaseModel):
+    status: str = Field(pattern="^(planned|returned|cancelled)$")
+    returned_at: datetime | None = None
+    notes: str | None = Field(default=None, max_length=500)
+
+class DemobilizationRead(DemobilizationCreate):
+    id: int
+    organization_id: str
+    status: str
+    created_at: datetime | None = None
+    model_config = ConfigDict(from_attributes=True)

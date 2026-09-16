@@ -65,3 +65,13 @@ class Mobilization(Base):
     arrival_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     notes: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+class Demobilization(Base):
+    __tablename__ = "demobilizations"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    organization_id: Mapped[str] = mapped_column(String(80), index=True)
+    assignment_id: Mapped[int] = mapped_column(ForeignKey("assignments.id", ondelete="CASCADE"), index=True)
+    status: Mapped[str] = mapped_column(String(30), default="planned")
+    returned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    notes: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

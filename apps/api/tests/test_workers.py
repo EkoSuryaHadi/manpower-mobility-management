@@ -102,3 +102,12 @@ def test_mobilization_lifecycle():
     updated = client.patch(f"/api/v1/mobilizations/{created.json()['id']}", headers={"X-Organization-ID": "org-mob"}, json={"status": "departed"})
     assert updated.status_code == 200
     assert updated.json()["status"] == "departed"
+
+def test_demobilization_closes_assignment():
+    worker = client.post("/api/v1/workers", headers={"X-Organization-ID": "org-demo"}, json={"organization_id": "org-demo", "employee_number": "EMP-DEMO", "full_name": "Putri"}).json()
+    assignment = client.post("/api/v1/assignments", headers={"X-Organization-ID": "org-demo"}, json={"worker_id": worker["id"], "position": "Planner", "site": "Site F"}).json()
+    created = client.post("/api/v1/demobilizations", headers={"X-Organization-ID": "org-demo"}, json={"assignment_id": assignment["id"], "notes": "Return complete"})
+    assert created.status_code == 201
+    updated = client.patch(f"/api/v1/demobilizations/{created.json()['id']}", headers={"X-Organization-ID": "org-demo"}, json={"status": "returned"})
+    assert updated.status_code == 200
+    assert client.get("/api/v1/assignments", headers={"X-Organization-ID": "org-demo"}).json()[0]["status"] == "demobilized"

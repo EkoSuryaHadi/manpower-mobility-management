@@ -21,3 +21,5 @@ Requirement endpoints: `GET/POST /api/v1/requirements`. Rules are scoped by orga
 Approval endpoints: `GET/POST /api/v1/approvals` and `PATCH /api/v1/approvals/{approval_id}`. Admin and manager can create and decide approvals; every decision records the principal user ID.
 
 Mobilization endpoints: `GET/POST /api/v1/mobilizations` and `PATCH /api/v1/mobilizations/{mobilization_id}`. Statuses are `planned`, `departed`, `arrived`, and `cancelled`.
+
+Demobilization endpoints: `GET/POST /api/v1/demobilizations` and `PATCH /api/v1/demobilizations/{demobilization_id}`. Statuses are `planned`, `returned`, and `cancelled`; returning an item closes its assignment as `demobilized`.
