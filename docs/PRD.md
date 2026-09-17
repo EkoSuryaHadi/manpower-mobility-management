@@ -36,10 +36,12 @@ Worker records currently expose employee_number, full_name, status, and created_
 - Authenticated frontend requests now forward the Supabase access token and organization metadata; local development falls back to `local-org` when Supabase is not configured.
 - Frontend now exposes assignment creation/listing and approval decision queues in addition to Worker Registry and dashboard.
 - Sprint 0 UI refresh now establishes an operations control-center shell: navy navigation, light workspace canvas, compact headings, real-data metric cards, pipeline overview, scan-friendly tables, responsive mobile navigation, explicit loading/error/empty states, and Indonesian operational copy.
+- The approved offshore enterprise mockup is now the primary visual reference. The application shell uses the MMMS identity, compact icon navigation, global search, color-coded KPI cards, workforce charts, and dense operational panels while continuing to show only API-backed values.
 - Frontend now includes assignment creation with active-worker selection, approval decision actions with comments, mobilization/demobilization status lists, and authenticated CSV report download.
+- Frontend now exposes Document Center, Pre-Mobilization Checklist, Requirement Master, a richer Worker Profile/readiness view, and Workforce Demography based on the existing worker, assignment, document, requirement, readiness, and report APIs.
 - Production baseline now includes API/web container images, CI tests/builds, database readiness checks, and mandatory authentication validation in production.
 - Frontend dependency audit is clean on Next.js 16.3.5; production deployment still requires real Supabase and private storage credentials.
 
 ## Scope boundary after UI refresh
 
-The redesign is a functional operational surface over the existing APIs, not a claim that every planned workflow is complete. Worker document/history tabs, requirement authoring, richer readiness detail, and end-to-end travel forms remain follow-on work. Production rollout still requires enforced authentication, real organization membership, private storage credentials, and seeded operational data.
+The redesign is a functional operational surface over the existing APIs, not a claim that every field visible in the concept image already exists in the data model. Photo, nationality, date of birth, discipline, employer, contact details, certification history, document approval detail, and demographic dimensions remain follow-on schema/API work. Production rollout still requires enforced authentication, real organization membership, private storage credentials, and seeded operational data.
