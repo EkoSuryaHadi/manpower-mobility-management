@@ -1,4 +1,4 @@
-const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "https://manpower-mobility-api.vercel.app";
 
 async function forward(request: Request, context: { params: Promise<{ path: string[] }> }) {
   const { path } = await context.params;
