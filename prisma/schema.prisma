@@ -1,0 +1,427 @@
+// Prisma Schema for Manpower Mobility Management System (MMS)
+// Designed for SQLite development with full PostgreSQL production compatibility
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// -------------------------------------------------------------
+// 1. Core Users, Roles & Organizations
+// -------------------------------------------------------------
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  fullName     String
+  phone        String?
+  role         String   // SYSTEM_ADMIN, SUBCONTRACTOR, CONTRACTOR_HR, CONTRACTOR_HSE, CLIENT_APPROVER, SITE_ADMIN, MANAGEMENT_VIEWER
+  companyId    String?
+  company      Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  verifiedDocuments WorkerDocument[]  @relation("Verifier")
+  approvalActions   ApprovalAction[]
+  uploadedVersions  DocumentVersion[]
+  auditLogs         AuditLog[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Company {
+  id           String   @id @default(uuid())
+  name         String
+  code         String   @unique
+  type         String   // CLIENT, MAIN_CONTRACTOR, SUBCONTRACTOR, VENDOR
+  address      String?
+  contactEmail String?
+  contactPhone String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  users       User[]
+  assignments WorkerAssignment[]
+  projects    Project[]
+
+  @@index([code])
+  @@index([type])
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  code        String   @unique
+  description String?
+  clientId    String
+  client      Company  @relation(fields: [clientId], references: [id])
+  startDate   DateTime
+  endDate     DateTime?
+  status      String   @default("ACTIVE") // PLANNING, ACTIVE, ON_HOLD, COMPLETED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sites        Site[]
+  assignments  WorkerAssignment[]
+  requirements DocumentRequirement[]
+
+  @@index([code])
+}
+
+model Site {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  code      String   @unique
+  location  String
+  siteType  String   // ONSHORE, OFFSHORE, REMOTE, FABRICATION_YARD
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignments  WorkerAssignment[]
+  requirements DocumentRequirement[]
+
+  @@index([projectId])
+  @@index([code])
+}
+
+// -------------------------------------------------------------
+// 2. Worker Master & Assignments
+// -------------------------------------------------------------
+
+model Worker {
+  id                    String   @id @default(uuid())
+  employeeNo            String   @unique
+  fullName              String
+  nik                   String   @unique
+  passportNo            String?
+  birthDate             DateTime
+  birthPlace            String?
+  gender                String   // MALE, FEMALE
+  nationality           String   @default("INDONESIAN")
+  contactNumber         String
+  email                 String?
+  address               String?
+  status                String   @default("ACTIVE") // ACTIVE, INACTIVE, BLACKLISTED
+  duplicateHash         String?
+  overallReadinessScore Float    @default(0.0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  assignments WorkerAssignment[]
+  documents   WorkerDocument[]
+
+  @@index([nik])
+  @@index([employeeNo])
+  @@index([fullName])
+}
+
+model WorkerAssignment {
+  id               String   @id @default(uuid())
+  workerId         String
+  worker           Worker   @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  projectId        String
+  project          Project  @relation(fields: [projectId], references: [id])
+  siteId           String
+  site             Site     @relation(fields: [siteId], references: [id])
+  companyId        String
+  company          Company  @relation(fields: [companyId], references: [id])
+  position         String
+  discipline       String   // CIVIL, MECHANICAL, ELECTRICAL, INSTRUMENTATION, PIPING, HSE, DRILLING, LOGISTICS, ADMIN
+  trade            String?  // Welder 6G, Rigger, Scaffolder, Electrician, Driver, Crane Operator
+  rotationSchedule String?  // 28/28, 14/14, 5/2, 6/1
+  startDate        DateTime
+  endDate          DateTime?
+  status           String   @default("PLANNED") // PLANNED, PRE_MOBILIZATION, READY_TO_MOBILIZE, MOBILIZED, ON_SITE, DEMOBILIZING, DEMOBILIZED, CANCELLED
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  preMobilizations PreMobilization[]
+  mobilizations    Mobilization[]
+  demobilizations  Demobilization[]
+
+  @@index([workerId])
+  @@index([projectId, siteId])
+  @@index([status])
+}
+
+// -------------------------------------------------------------
+// 3. Document Catalog, Dynamic Rules & Uploads
+// -------------------------------------------------------------
+
+model DocumentType {
+  id                  String   @id @default(uuid())
+  code                String   @unique
+  name                String
+  category            String   // IDENTITY, MEDICAL, HSE, COMPETENCY, LEGAL, INSURANCE
+  description         String?
+  defaultValidityDays Int?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  requirements    DocumentRequirement[]
+  workerDocuments WorkerDocument[]
+
+  @@index([code])
+  @@index([category])
+}
+
+model DocumentRequirement {
+  id             String   @id @default(uuid())
+  name           String
+  projectId      String?
+  project        Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  siteId         String?
+  site           Site?    @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  companyId      String?
+  position       String?
+  discipline     String?
+  trade          String?
+  documentTypeId String
+  documentType   DocumentType @relation(fields: [documentTypeId], references: [id])
+  isMandatory    Boolean  @default(true)
+  isBlocking     Boolean  @default(true)
+  warningDays    Int      @default(30)
+  version        Int      @default(1)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  checklistItems ChecklistItem[]
+
+  @@index([projectId, siteId])
+  @@index([documentTypeId])
+}
+
+model WorkerDocument {
+  id                 String   @id @default(uuid())
+  workerId           String
+  worker             Worker   @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  documentTypeId     String
+  documentType       DocumentType @relation(fields: [documentTypeId], references: [id])
+  documentNumber     String
+  issueDate          DateTime
+  expiryDate         DateTime?
+  verificationStatus String   @default("PENDING") // PENDING, VERIFIED, REJECTED, EXPIRED
+  verifierId         String?
+  verifier           User?    @relation("Verifier", fields: [verifierId], references: [id])
+  verifierRemarks    String?
+  verifiedAt         DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  versions       DocumentVersion[]
+  checklistItems ChecklistItem[]
+
+  @@index([workerId])
+  @@index([documentTypeId])
+  @@index([verificationStatus])
+}
+
+model DocumentVersion {
+  id               String         @id @default(uuid())
+  workerDocumentId String
+  workerDocument   WorkerDocument @relation(fields: [workerDocumentId], references: [id], onDelete: Cascade)
+  fileUrl          String
+  fileName         String
+  fileSize         Int
+  mimeType         String
+  uploadedById     String?
+  uploadedBy       User?          @relation(fields: [uploadedById], references: [id])
+  createdAt        DateTime       @default(now())
+
+  @@index([workerDocumentId])
+}
+
+// -------------------------------------------------------------
+// 4. Pre-Mobilization, Readiness & Approvals
+// -------------------------------------------------------------
+
+model PreMobilization {
+  id             String   @id @default(uuid())
+  requestNo      String   @unique
+  assignmentId   String
+  assignment     WorkerAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  plannedDate    DateTime
+  readinessScore Float    @default(0.0)
+  blockingCount  Int      @default(0)
+  status         String   @default("DRAFT") // DRAFT, SUBMITTED, IN_REVIEW, APPROVED, REVISION_REQUIRED, REJECTED, BLOCKED
+  currentStep    String   @default("CONTRACTOR_HR") // CONTRACTOR_HR, CONTRACTOR_HSE, CLIENT_APPROVER, COMPLETED
+  submittedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  checklistItems    ChecklistItem[]
+  approvalInstances ApprovalInstance[]
+  mobilizations     Mobilization[]
+
+  @@index([requestNo])
+  @@index([assignmentId])
+  @@index([status])
+}
+
+model ChecklistItem {
+  id                String              @id @default(uuid())
+  preMobilizationId String
+  preMobilization   PreMobilization     @relation(fields: [preMobilizationId], references: [id], onDelete: Cascade)
+  requirementId     String
+  requirement       DocumentRequirement @relation(fields: [requirementId], references: [id])
+  documentId        String?
+  document          WorkerDocument?     @relation(fields: [documentId], references: [id])
+  isSatisfied       Boolean             @default(false)
+  isBlocking        Boolean             @default(true)
+  status            String              @default("MISSING") // SATISFIED, MISSING, EXPIRED, PENDING_REVIEW, REJECTED
+  remarks           String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([preMobilizationId])
+  @@index([requirementId])
+}
+
+model ApprovalWorkflow {
+  id          String   @id @default(uuid())
+  name        String
+  code        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  steps     ApprovalStep[]
+  instances ApprovalInstance[]
+}
+
+model ApprovalStep {
+  id           String           @id @default(uuid())
+  workflowId   String
+  workflow     ApprovalWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  stepOrder    Int
+  stepName     String
+  requiredRole String           // CONTRACTOR_HR, CONTRACTOR_HSE, CLIENT_APPROVER
+  timeoutHours Int?             @default(48)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@unique([workflowId, stepOrder])
+}
+
+model ApprovalInstance {
+  id                String           @id @default(uuid())
+  preMobilizationId String
+  preMobilization   PreMobilization  @relation(fields: [preMobilizationId], references: [id], onDelete: Cascade)
+  workflowId        String
+  workflow          ApprovalWorkflow @relation(fields: [workflowId], references: [id])
+  currentStepOrder  Int              @default(1)
+  status            String           @default("PENDING") // PENDING, APPROVED, REJECTED, RETURNED
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  actions ApprovalAction[]
+
+  @@index([preMobilizationId])
+}
+
+model ApprovalAction {
+  id                 String           @id @default(uuid())
+  approvalInstanceId String
+  approvalInstance   ApprovalInstance @relation(fields: [approvalInstanceId], references: [id], onDelete: Cascade)
+  stepOrder          Int
+  actorId            String
+  actor              User             @relation(fields: [actorId], references: [id])
+  actionType         String           // SUBMIT, APPROVE, RETURN_REVISION, REJECT
+  comments           String?
+  createdAt          DateTime         @default(now())
+
+  @@index([approvalInstanceId])
+}
+
+// -------------------------------------------------------------
+// 5. Mobilization, On-Site & Demobilization
+// -------------------------------------------------------------
+
+model Mobilization {
+  id                   String           @id @default(uuid())
+  preMobilizationId    String
+  preMobilization      PreMobilization  @relation(fields: [preMobilizationId], references: [id])
+  assignmentId         String
+  assignment           WorkerAssignment @relation(fields: [assignmentId], references: [id])
+  travelMethod         String           // FLIGHT, SPEEDBOAT, BUS, CHARTER
+  flightOrVehicleNo    String
+  departurePoint       String
+  departureDate        DateTime
+  estimatedArrivalDate DateTime
+  actualArrivalDate    DateTime?
+  arrivalConfirmedBy   String?
+  status               String           @default("SCHEDULED") // SCHEDULED, IN_TRANSIT, ARRIVED, CANCELLED
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  @@index([assignmentId])
+  @@index([status])
+}
+
+model Demobilization {
+  id                   String           @id @default(uuid())
+  assignmentId         String
+  assignment           WorkerAssignment @relation(fields: [assignmentId], references: [id])
+  reason               String           // CONTRACT_END, ROTATION_LEAVE, MEDICAL_EVACUATION, RESIGNATION, DISMISSAL
+  requestDate          DateTime         @default(now())
+  plannedDepartureDate DateTime
+  actualDepartureDate  DateTime?
+  status               String           @default("REQUESTED") // REQUESTED, IN_CLEARANCE, CLEARED, CLOSED, CANCELLED
+  approvedBy           String?
+  closedAt             DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  clearanceItems ClearanceItem[]
+
+  @@index([assignmentId])
+  @@index([status])
+}
+
+model ClearanceItem {
+  id               String         @id @default(uuid())
+  demobilizationId String
+  demobilization   Demobilization @relation(fields: [demobilizationId], references: [id], onDelete: Cascade)
+  itemName         String         // Camp Accommodation, PPE & Tools, Site Security Badge, Medical Exit Check
+  category         String         // LOGISTICS, ASSETS, SECURITY, HEALTH
+  isCleared        Boolean        @default(false)
+  clearedBy        String?
+  clearedAt        DateTime?
+  remarks          String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([demobilizationId])
+}
+
+// -------------------------------------------------------------
+// 6. Audit Logging & System Traceability
+// -------------------------------------------------------------
+
+model AuditLog {
+  id            String   @id @default(uuid())
+  actorId       String?
+  actor         User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actorName     String?
+  action        String   // CREATE, UPDATE, DELETE, VERIFY, APPROVE, REJECT, MOBILIZE, ARRIVE, DEMOBILIZE
+  entityType    String   // WORKER, ASSIGNMENT, DOCUMENT, REQUIREMENT, APPROVAL, MOBILIZATION, DEMOBILIZATION
+  entityId      String
+  payloadBefore String?
+  payloadAfter  String?
+  ipAddress     String?
+  timestamp     DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([timestamp])
+}
