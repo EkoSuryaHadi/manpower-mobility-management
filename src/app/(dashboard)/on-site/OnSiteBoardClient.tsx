@@ -187,7 +187,7 @@ export function OnSiteBoardClient({ assignments }: OnSiteBoardClientProps) {
                 />
               </div>
 
-              <div className="text-[11px] text-slate-500 bg-amber-50 p-2.5 rounded-lg border border-amber-200 text-amber-800">
+              <div className="text-[11px] bg-amber-50 p-2.5 rounded-lg border border-amber-200 text-amber-800">
                 Pengajuan akan membuat checklist clearance (Akomodasi, APD/Tools, ID Badge, Medis) yang wajib diselesaikan sebelum assignment ditutup.
               </div>
 

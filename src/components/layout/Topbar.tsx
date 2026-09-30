@@ -2,7 +2,8 @@
 
 import React from "react";
 import { DevRoleSwitcher } from "./DevRoleSwitcher";
-import { Search, Bell, HelpCircle } from "lucide-react";
+import { NotificationDropdown } from "./NotificationDropdown";
+import { Search, HelpCircle } from "lucide-react";
 
 export function Topbar() {
   return (
@@ -30,11 +31,8 @@ export function Topbar() {
           <span className="hidden md:inline font-medium text-slate-600">SOP & Rules</span>
         </button>
 
-        {/* Notifications */}
-        <button className="relative p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition">
-          <Bell className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white" />
-        </button>
+        {/* Real-time Compliance & Due Date Notification Dropdown */}
+        <NotificationDropdown />
 
         <div className="h-6 w-px bg-slate-200 mx-1" />
 

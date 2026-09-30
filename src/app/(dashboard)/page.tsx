@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   Clock,
   Building,
+  UserCheck,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +25,7 @@ export default async function DashboardPage() {
   let onSiteCount = 0;
   let readyToMobilizeCount = 0;
   let blockedCount = 0;
+  let expiringDocsCount = 0;
   let recentAssignments: any[] = [];
   let recentAudits: any[] = [];
 
@@ -37,6 +39,19 @@ export default async function DashboardPage() {
     });
     blockedCount = await prisma.preMobilization.count({
       where: { status: "BLOCKED" },
+    });
+
+    // Check expiring docs within 60 days
+    const now = new Date();
+    const future60Days = new Date();
+    future60Days.setDate(future60Days.getDate() + 60);
+
+    expiringDocsCount = await prisma.workerDocument.count({
+      where: {
+        expiryDate: {
+          lte: future60Days,
+        },
+      },
     });
 
     recentAssignments = await prisma.workerAssignment.findMany({
@@ -81,16 +96,16 @@ export default async function DashboardPage() {
       color: "text-indigo-600 bg-indigo-50 border-indigo-100",
     },
     {
-      title: "Compliance Rate",
-      value: "94.2%",
-      change: "Zero fatal safety gaps",
-      icon: ShieldCheck,
-      color: "text-teal-600 bg-teal-50 border-teal-100",
+      title: "Expiring Documents",
+      value: expiringDocsCount || 0,
+      change: "Mendekati / expired",
+      icon: Clock,
+      color: "text-amber-600 bg-amber-50 border-amber-100",
     },
     {
       title: "Mobilization Blocked",
       value: blockedCount || 1,
-      change: "Missing critical certificates",
+      change: "Zero safety gap policy",
       icon: AlertTriangle,
       color: "text-rose-600 bg-rose-50 border-rose-100",
     },
@@ -113,11 +128,11 @@ export default async function DashboardPage() {
 
         <div className="flex items-center gap-3 shrink-0">
           <Link
-            href="/import"
-            className="flex items-center gap-2 px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-medium border border-slate-700 transition"
+            href="/documents/expiry"
+            className="flex items-center gap-2 px-3.5 py-2 bg-rose-950/60 hover:bg-rose-900/80 text-rose-200 rounded-lg text-xs font-medium border border-rose-800/80 transition"
           >
-            <FileSpreadsheet className="w-4 h-4 text-brand-400" />
-            Bulk Onboarding
+            <Clock className="w-4 h-4 text-rose-400" />
+            Due Date Watchlist
           </Link>
           <Link
             href="/workers"
@@ -219,6 +234,28 @@ export default async function DashboardPage() {
             <h2 className="text-sm font-bold text-slate-800 mb-3">Quick Operational Actions</h2>
             <div className="grid grid-cols-2 gap-2.5">
               <Link
+                href="/documents/expiry"
+                className="p-3 rounded-lg border border-slate-200 hover:border-rose-500 hover:bg-rose-50/40 transition group"
+              >
+                <div className="w-7 h-7 rounded-md bg-rose-50 text-rose-600 flex items-center justify-center mb-2 group-hover:scale-110 transition">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <div className="text-xs font-bold text-slate-800">Due Date Watchlist</div>
+                <div className="text-[10px] text-slate-500 mt-0.5">PKWT & MCU monitor</div>
+              </Link>
+
+              <Link
+                href="/users"
+                className="p-3 rounded-lg border border-slate-200 hover:border-brand-500 hover:bg-brand-50/40 transition group"
+              >
+                <div className="w-7 h-7 rounded-md bg-teal-50 text-teal-600 flex items-center justify-center mb-2 group-hover:scale-110 transition">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <div className="text-xs font-bold text-slate-800">User & RBAC</div>
+                <div className="text-[10px] text-slate-500 mt-0.5">Role & group access</div>
+              </Link>
+
+              <Link
                 href="/pre-mobilization"
                 className="p-3 rounded-lg border border-slate-200 hover:border-brand-500 hover:bg-brand-50/40 transition group"
               >
@@ -238,28 +275,6 @@ export default async function DashboardPage() {
                 </div>
                 <div className="text-xs font-bold text-slate-800">Approval Inbox</div>
                 <div className="text-[10px] text-slate-500 mt-0.5">Review submissions</div>
-              </Link>
-
-              <Link
-                href="/documents"
-                className="p-3 rounded-lg border border-slate-200 hover:border-brand-500 hover:bg-brand-50/40 transition group"
-              >
-                <div className="w-7 h-7 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2 group-hover:scale-110 transition">
-                  <ShieldCheck className="w-4 h-4" />
-                </div>
-                <div className="text-xs font-bold text-slate-800">Document Center</div>
-                <div className="text-[10px] text-slate-500 mt-0.5">Split verification</div>
-              </Link>
-
-              <Link
-                href="/requirements"
-                className="p-3 rounded-lg border border-slate-200 hover:border-brand-500 hover:bg-brand-50/40 transition group"
-              >
-                <div className="w-7 h-7 rounded-md bg-purple-50 text-purple-600 flex items-center justify-center mb-2 group-hover:scale-110 transition">
-                  <Building className="w-4 h-4" />
-                </div>
-                <div className="text-xs font-bold text-slate-800">Rule Simulator</div>
-                <div className="text-[10px] text-slate-500 mt-0.5">Test dynamic rules</div>
               </Link>
             </div>
           </div>
