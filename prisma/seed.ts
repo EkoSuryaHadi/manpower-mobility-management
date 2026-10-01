@@ -380,6 +380,29 @@ async function main() {
     });
   }
 
+  // Pre-Mobilization Request & Multi-stage Approval Instance for Worker 1 (Budi Santoso)
+  const pm1 = await prisma.preMobilization.create({
+    data: {
+      requestNo: "PM-2026-001",
+      assignmentId: a1.id,
+      plannedDate: new Date("2026-10-15"),
+      readinessScore: 100.0,
+      blockingCount: 0,
+      status: "SUBMITTED",
+      currentStep: "CONTRACTOR_HR",
+      submittedAt: new Date("2026-09-28"),
+    },
+  });
+
+  await prisma.approvalInstance.create({
+    data: {
+      preMobilizationId: pm1.id,
+      workflowId: workflow.id,
+      currentStepOrder: 1,
+      status: "PENDING",
+    },
+  });
+
   // Worker 2: Ahmad Hidayat (Blocked - Missing BOSIET)
   const w2 = await prisma.worker.create({
     data: {

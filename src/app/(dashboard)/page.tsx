@@ -279,18 +279,6 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          {/* Hard Blocker Alert Card */}
-          <div className="bg-gradient-to-br from-rose-50 to-orange-50 border border-rose-200 rounded-xl p-4">
-            <div className="flex items-start gap-2.5">
-              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-              <div>
-                <div className="text-xs font-bold text-rose-900">Zero-Blocking Policy Enforced</div>
-                <p className="text-[11px] text-rose-700 mt-1 leading-relaxed">
-                  Sesuai PRD MVP v1.0, pekerja dengan dokumen blocking yang kedaluwarsa atau belum diverifikasi otomatis berstatus <b>BLOCKED</b> dan tidak dapat dimobilisasi.
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

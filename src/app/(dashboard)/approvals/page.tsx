@@ -68,7 +68,7 @@ export default async function ApprovalsPage({
             Multi-Stage Approval Workspace
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Antrean verifikasi berjenjang: Subcontractor $\rightarrow$ Contractor HR $\rightarrow$ Contractor HSE $\rightarrow$ Client Approver.
+            Antrean verifikasi berjenjang: Subcontractor → Contractor HR → Contractor HSE → Client Approver.
           </p>
         </div>
       </div>
