@@ -1,0 +1,80 @@
+export const WORKER_STATUS = {
+  ACTIVE: "ACTIVE",
+  INACTIVE: "INACTIVE",
+  BLACKLISTED: "BLACKLISTED",
+} as const;
+export type WorkerStatus = (typeof WORKER_STATUS)[keyof typeof WORKER_STATUS];
+
+export const ASSIGNMENT_STATUS = {
+  PLANNED: "PLANNED",
+  PRE_MOBILIZATION: "PRE_MOBILIZATION",
+  READY_TO_MOBILIZE: "READY_TO_MOBILIZE",
+  MOBILIZED: "MOBILIZED",
+  ON_SITE: "ON_SITE",
+  DEMOBILIZING: "DEMOBILIZING",
+  DEMOBILIZED: "DEMOBILIZED",
+  CANCELLED: "CANCELLED",
+} as const;
+export type AssignmentStatus = (typeof ASSIGNMENT_STATUS)[keyof typeof ASSIGNMENT_STATUS];
+
+export const PREMOB_STATUS = {
+  DRAFT: "DRAFT",
+  SUBMITTED: "SUBMITTED",
+  IN_REVIEW: "IN_REVIEW",
+  APPROVED: "APPROVED",
+  REVISION_REQUIRED: "REVISION_REQUIRED",
+  REJECTED: "REJECTED",
+  BLOCKED: "BLOCKED",
+} as const;
+export type PreMobStatus = (typeof PREMOB_STATUS)[keyof typeof PREMOB_STATUS];
+
+export const MOBILIZATION_STATUS = {
+  SCHEDULED: "SCHEDULED",
+  IN_TRANSIT: "IN_TRANSIT",
+  ARRIVED: "ARRIVED",
+  CANCELLED: "CANCELLED",
+} as const;
+export type MobilizationStatus = (typeof MOBILIZATION_STATUS)[keyof typeof MOBILIZATION_STATUS];
+
+export const DEMOBILIZATION_STATUS = {
+  REQUESTED: "REQUESTED",
+  IN_CLEARANCE: "IN_CLEARANCE",
+  CLEARED: "CLEARED",
+  CLOSED: "CLOSED",
+  CANCELLED: "CANCELLED",
+} as const;
+export type DemobStatus = (typeof DEMOBILIZATION_STATUS)[keyof typeof DEMOBILIZATION_STATUS];
+
+export const VERIFICATION_STATUS = {
+  PENDING: "PENDING",
+  VERIFIED: "VERIFIED",
+  REJECTED: "REJECTED",
+  EXPIRED: "EXPIRED",
+} as const;
+export type VerificationStatus = (typeof VERIFICATION_STATUS)[keyof typeof VERIFICATION_STATUS];
+
+export const DOCUMENT_CATEGORY = {
+  IDENTITY: "IDENTITY",
+  MEDICAL: "MEDICAL",
+  HSE: "HSE",
+  COMPETENCY: "COMPETENCY",
+  LEGAL: "LEGAL",
+  INSURANCE: "INSURANCE",
+} as const;
+export type DocumentCategory = (typeof DOCUMENT_CATEGORY)[keyof typeof DOCUMENT_CATEGORY];
+
+export const APPROVAL_ACTION = {
+  SUBMIT: "SUBMIT",
+  APPROVE: "APPROVE",
+  RETURN_REVISION: "RETURN_REVISION",
+  REJECT: "REJECT",
+} as const;
+export type ApprovalAction = (typeof APPROVAL_ACTION)[keyof typeof APPROVAL_ACTION];
+
+export const CLEARANCE_CATEGORY = {
+  LOGISTICS: "LOGISTICS",
+  ASSETS: "ASSETS",
+  SECURITY: "SECURITY",
+  HEALTH: "HEALTH",
+} as const;
+export type ClearanceCategory = (typeof CLEARANCE_CATEGORY)[keyof typeof CLEARANCE_CATEGORY];
