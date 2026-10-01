@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
+import { getClientIp } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -7,7 +9,14 @@ export async function GET() {
   try {
     const users = await prisma.user.findMany({
       orderBy: { createdAt: "desc" },
-      include: {
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        role: true,
+        phone: true,
+        isActive: true,
+        companyId: true,
         company: {
           select: {
             id: true,
@@ -16,6 +25,8 @@ export async function GET() {
             type: true,
           },
         },
+        createdAt: true,
+        updatedAt: true,
       },
     });
 
@@ -43,6 +54,18 @@ export async function POST(req: Request) {
       );
     }
 
+    // Check existing email
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      return NextResponse.json(
+        { success: false, error: `Email ${email} sudah terdaftar.` },
+        { status: 400 }
+      );
+    }
+
+    const rawPassword = password || "ChangeMe123!";
+    const passwordHash = await bcrypt.hash(rawPassword, 10);
+
     const newUser = await prisma.user.create({
       data: {
         email,
@@ -50,7 +73,7 @@ export async function POST(req: Request) {
         role,
         companyId: companyId || null,
         phone: phone || null,
-        passwordHash: password || "demo12345",
+        passwordHash,
         isActive: true,
       },
       include: {
@@ -58,7 +81,9 @@ export async function POST(req: Request) {
       },
     });
 
-    // Create audit log
+    const { passwordHash: _, ...safeUser } = newUser;
+
+    // Create audit log with IP
     try {
       await prisma.auditLog.create({
         data: {
@@ -66,14 +91,15 @@ export async function POST(req: Request) {
           action: "CREATE",
           entityType: "USER",
           entityId: newUser.id,
-          payloadAfter: JSON.stringify(newUser),
+          payloadAfter: JSON.stringify(safeUser),
+          ipAddress: getClientIp(req),
         },
       });
     } catch {}
 
     return NextResponse.json({
       success: true,
-      data: newUser,
+      data: safeUser,
       message: "User created successfully",
     });
   } catch (error: any) {

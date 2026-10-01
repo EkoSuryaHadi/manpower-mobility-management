@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { logAuditEvent } from "@/lib/audit";
+import { logAuditEvent, getClientIp } from "@/lib/audit";
 import { calculateWorkerReadiness } from "@/lib/readiness-engine";
 
 export async function POST(req: NextRequest) {
@@ -12,28 +12,36 @@ export async function POST(req: NextRequest) {
     }
 
     let importedCount = 0;
+    let seq = 0;
+    const year = new Date().getFullYear();
 
     for (const w of workers) {
-      const employeeNo = `EMP-${Date.now().toString().slice(-4)}-${Math.floor(100 + Math.random() * 900)}`;
+      seq++;
+      const employeeNo =
+        w.employeeNo ||
+        `EMP-${year}-${Date.now().toString().slice(-4)}${String(seq).padStart(3, "0")}-${Math.floor(100 + Math.random() * 900)}`;
 
-      // 1. Create or connect Worker
-      const createdWorker = await prisma.worker.create({
-        data: {
-          employeeNo,
-          fullName: w.fullName,
-          nik: w.nik,
-          birthDate: new Date(w.birthDate),
-          gender: w.gender || "MALE",
-          contactNumber: w.contactNumber || "0812000000",
-          status: "ACTIVE",
-          overallReadinessScore: 0.0,
-        },
-      });
+      // 1. Create or connect Worker (check existing NIK)
+      let workerRecord = await prisma.worker.findUnique({ where: { nik: w.nik } });
+      if (!workerRecord) {
+        workerRecord = await prisma.worker.create({
+          data: {
+            employeeNo,
+            fullName: w.fullName,
+            nik: w.nik,
+            birthDate: new Date(w.birthDate),
+            gender: w.gender || "MALE",
+            contactNumber: w.contactNumber || "0812000000",
+            status: "ACTIVE",
+            overallReadinessScore: 0.0,
+          },
+        });
+      }
 
       // 2. Create Assignment
       const assignment = await prisma.workerAssignment.create({
         data: {
-          workerId: createdWorker.id,
+          workerId: workerRecord.id,
           projectId,
           siteId,
           companyId,
@@ -61,6 +69,7 @@ export async function POST(req: NextRequest) {
       entityType: "WORKER",
       entityId: `BATCH-${Date.now()}`,
       payloadAfter: { importedCount, projectId, siteId, companyId },
+      ipAddress: getClientIp(req),
     });
 
     return NextResponse.json({ success: true, importedCount });

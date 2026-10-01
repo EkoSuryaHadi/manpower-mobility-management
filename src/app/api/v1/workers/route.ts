@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getClientIp } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -114,7 +115,7 @@ export async function POST(req: Request) {
     // Generate Employee No if not provided
     const finalEmployeeNo =
       employeeNo ||
-      `EMP-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      `EMP-${new Date().getFullYear()}-${Date.now().toString().slice(-5)}${Math.floor(100 + Math.random() * 900)}`;
 
     const newWorker = await prisma.worker.create({
       data: {
@@ -167,6 +168,7 @@ export async function POST(req: Request) {
           entityType: "WORKER",
           entityId: newWorker.id,
           payloadAfter: JSON.stringify({ worker: newWorker, assignment: createdAssignment }),
+          ipAddress: getClientIp(req),
         },
       });
     } catch {}

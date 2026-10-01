@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -130,13 +131,17 @@ async function main() {
     },
   ];
 
+  const defaultHash = await bcrypt.hash("password123", 10);
+
   for (const u of usersData) {
     await prisma.user.upsert({
       where: { email: u.email },
-      update: {},
+      update: {
+        passwordHash: defaultHash,
+      },
       create: {
         email: u.email,
-        passwordHash: "password123", // Demo hash
+        passwordHash: defaultHash,
         fullName: u.fullName,
         role: u.role,
         companyId: u.companyId,
@@ -326,6 +331,12 @@ async function main() {
   });
 
   // 7. Sample Workers & Assignments
+  const existingW1 = await prisma.worker.findUnique({ where: { nik: "3201123456780001" } });
+  if (existingW1) {
+    console.log("MMS seed completed successfully. (Sample workers already exist)");
+    return;
+  }
+
   // Worker 1: Budi Santoso (100% Ready)
   const w1 = await prisma.worker.create({
     data: {

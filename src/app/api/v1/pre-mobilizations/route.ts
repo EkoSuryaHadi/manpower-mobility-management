@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { calculateWorkerReadiness } from "@/lib/readiness-engine";
-import { logAuditEvent } from "@/lib/audit";
+import { logAuditEvent, getClientIp } from "@/lib/audit";
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,7 +19,8 @@ export async function POST(req: NextRequest) {
       where: { code: "STD-MOB-V1" },
     });
 
-    const requestNo = `PM-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    const year = new Date().getFullYear();
+    const requestNo = `PM-${year}-${Date.now().toString().slice(-4)}${Math.floor(1000 + Math.random() * 9000)}`;
 
     const preMob = await prisma.preMobilization.create({
       data: {
@@ -56,6 +57,7 @@ export async function POST(req: NextRequest) {
       entityType: "PRE_MOBILIZATION",
       entityId: preMob.id,
       payloadAfter: { requestNo, assignmentId, score: evaluation.readinessScore },
+      ipAddress: getClientIp(req),
     });
 
     return NextResponse.json({ success: true, requestNo, preMobId: preMob.id });

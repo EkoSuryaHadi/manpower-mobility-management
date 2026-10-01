@@ -37,7 +37,7 @@ export function Topbar() {
         <div className="h-6 w-px bg-slate-200 mx-1" />
 
         {/* Development Persona Impersonator */}
-        <DevRoleSwitcher />
+        {process.env.NODE_ENV === "development" && <DevRoleSwitcher />}
       </div>
     </header>
   );

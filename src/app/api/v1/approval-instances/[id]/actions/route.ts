@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { logAuditEvent } from "@/lib/audit";
+import { logAuditEvent, getClientIp } from "@/lib/audit";
 
 export async function POST(
   req: NextRequest,
@@ -31,12 +31,19 @@ export async function POST(
     const actor = (await prisma.user.findFirst({ where: { role: "SYSTEM_ADMIN" } })) ||
       (await prisma.user.findFirst());
 
+    if (!actor) {
+      return NextResponse.json(
+        { error: "No authorized actor user exists in the system to record this action." },
+        { status: 400 }
+      );
+    }
+
     // Record immutable ApprovalAction
     await prisma.approvalAction.create({
       data: {
         approvalInstanceId: instance.id,
         stepOrder: instance.currentStepOrder,
-        actorId: actor?.id || "system",
+        actorId: actor.id,
         actionType,
         comments: comment || null,
       },
@@ -114,10 +121,13 @@ export async function POST(
     }
 
     await logAuditEvent({
+      actorId: actor.id,
+      actorName: actor.fullName,
       action: `APPROVAL_${actionType}`,
       entityType: "APPROVAL",
       entityId: instance.id,
       payloadAfter: { actionType, stepOrder: instance.currentStepOrder, comment },
+      ipAddress: getClientIp(req),
     });
 
     return NextResponse.json({ success: true });
