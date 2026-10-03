@@ -4,7 +4,18 @@ export interface LogAuditParams {
   actorId?: string;
   actorName?: string;
   action: string;
-  entityType: "WORKER" | "ASSIGNMENT" | "DOCUMENT" | "REQUIREMENT" | "PRE_MOBILIZATION" | "APPROVAL" | "MOBILIZATION" | "DEMOBILIZATION";
+  entityType:
+    | "WORKER"
+    | "ASSIGNMENT"
+    | "DOCUMENT"
+    | "REQUIREMENT"
+    | "PRE_MOBILIZATION"
+    | "APPROVAL"
+    | "MOBILIZATION"
+    | "DEMOBILIZATION"
+    | "USER"
+    | "COMPANY"
+    | "AUTH";
   entityId: string;
   payloadBefore?: any;
   payloadAfter?: any;

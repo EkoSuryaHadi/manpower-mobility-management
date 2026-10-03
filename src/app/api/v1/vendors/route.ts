@@ -1,16 +1,30 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/auth-guard";
+import { errorResponse, serverErrorResponse, successResponse } from "@/lib/api-utils";
+import { logAuditEvent, getClientIp } from "@/lib/audit";
+import bcrypt from "bcryptjs";
+import { generateTempPassword } from "@/lib/password";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   try {
+    const auth = await requireAuth(req, ["VIEW_VENDOR_DASHBOARD", "MANAGE_VENDORS"]);
+    if (auth.error) return auth.error;
+    const actor = auth.user;
+
     const { searchParams } = new URL(req.url);
     const type = searchParams.get("type") || "ALL";
 
     const whereClause: any = {};
     if (type !== "ALL") {
       whereClause.type = type;
+    }
+
+    // Role isolation: Subcontractors only see their own company
+    if (actor.role === "SUBCONTRACTOR" && actor.companyId) {
+      whereClause.id = actor.companyId;
     }
 
     const companies = await prisma.company.findMany({
@@ -73,11 +87,9 @@ export async function GET(req: Request) {
       const readyToMobilizeCount = c.assignments.filter((a) => a.status === "READY_TO_MOBILIZE").length;
       const preMobCount = c.assignments.filter((a) => a.status === "PRE_MOBILIZATION").length;
 
-      // Calculate quota (standard default or based on assignments)
       const approvedQuota = totalAssigned > 0 ? Math.max(totalAssigned + 5, 20) : 15;
       const quotaUtilization = Math.round((onSiteCount / approvedQuota) * 100);
 
-      // Check expiring docs
       let expiringDocsCount = 0;
       let expiredDocsCount = 0;
       c.assignments.forEach((a) => {
@@ -93,7 +105,6 @@ export async function GET(req: Request) {
         });
       });
 
-      // Synthetic Ring Demographic breakdown based on NIK/ID for demo representation
       const ring1Count = Math.ceil(totalAssigned * 0.4);
       const ring2Count = Math.floor(totalAssigned * 0.3);
       const ring3Count = Math.floor(totalAssigned * 0.2);
@@ -128,53 +139,67 @@ export async function GET(req: Request) {
       };
     });
 
-    return NextResponse.json({
-      success: true,
-      data,
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error.message || "Failed to fetch vendor list" },
-      { status: 500 }
-    );
+    return successResponse(data);
+  } catch (error) {
+    return serverErrorResponse("vendors-list", error);
   }
 }
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const auth = await requireAuth(req, ["MANAGE_VENDORS"]);
+    if (auth.error) return auth.error;
+    const actor = auth.user;
+
+    const body = await req.json().catch(() => ({}));
     const { name, code, type, address, contactEmail, contactPhone, picName, picEmail, picPhone } = body;
 
     if (!name || !code || !type) {
-      return NextResponse.json(
-        { success: false, error: "Name, code, and type are required." },
-        { status: 400 }
-      );
+      return errorResponse("Name, code, and type are required.", 400);
+    }
+
+    const cleanCode = String(code).trim().toUpperCase();
+    const existing = await prisma.company.findUnique({ where: { code: cleanCode } });
+    if (existing) {
+      return errorResponse(`Kode vendor ${cleanCode} sudah digunakan.`, 400);
     }
 
     const company = await prisma.company.create({
       data: {
-        name,
-        code: code.toUpperCase(),
-        type,
-        address: address || null,
-        contactEmail: contactEmail || null,
-        contactPhone: contactPhone || null,
+        name: String(name).trim(),
+        code: cleanCode,
+        type: String(type).trim(),
+        address: address?.trim() || null,
+        contactEmail: contactEmail?.trim() || null,
+        contactPhone: contactPhone?.trim() || null,
       },
     });
 
-    // If PIC provided, create user linked to company
+    // If PIC provided, create user linked to company with secure temp password
+    let picUser = null;
+    let tempPassword: string | undefined;
+
     if (picName && picEmail) {
       try {
-        await prisma.user.create({
+        const cleanEmail = String(picEmail).trim().toLowerCase();
+        tempPassword = generateTempPassword();
+        const passwordHash = await bcrypt.hash(tempPassword, 10);
+
+        picUser = await prisma.user.create({
           data: {
-            fullName: picName,
-            email: picEmail,
-            phone: picPhone || null,
+            fullName: String(picName).trim(),
+            email: cleanEmail,
+            phone: picPhone?.trim() || null,
             role: type === "SUBCONTRACTOR" || type === "VENDOR" ? "SUBCONTRACTOR" : "CONTRACTOR_HR",
             companyId: company.id,
-            passwordHash: "password123",
+            passwordHash,
             isActive: true,
+          },
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            role: true,
           },
         });
       } catch (e) {
@@ -182,27 +207,24 @@ export async function POST(req: Request) {
       }
     }
 
-    try {
-      await prisma.auditLog.create({
-        data: {
-          actorName: "System Admin",
-          action: "CREATE",
-          entityType: "COMPANY",
-          entityId: company.id,
-          payloadAfter: JSON.stringify(company),
-        },
-      });
-    } catch {}
+    await logAuditEvent({
+      actorId: actor.id,
+      actorName: actor.fullName,
+      action: "CREATE",
+      entityType: "COMPANY",
+      entityId: company.id,
+      payloadAfter: { company, picCreated: !!picUser },
+      ipAddress: getClientIp(req),
+    });
 
     return NextResponse.json({
       success: true,
       data: company,
+      picUser,
+      picTempPassword: tempPassword,
       message: "Vendor / Company created successfully",
     });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error.message || "Failed to create company" },
-      { status: 500 }
-    );
+  } catch (error) {
+    return serverErrorResponse("vendors-create", error);
   }
 }

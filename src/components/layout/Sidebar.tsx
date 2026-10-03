@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -22,7 +22,9 @@ import {
   Eye,
   Filter,
 } from "lucide-react";
-import { DEMO_PERSONAS, MMSUserRole, DemoPersona } from "@/lib/auth";
+import { DEMO_PERSONAS } from "@/lib/auth";
+import { canAccessRoute } from "@/lib/route-access";
+import type { SessionUser } from "./types";
 
 interface NavItem {
   label: string;
@@ -30,186 +32,47 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   badge?: string;
   badgeColor?: string;
-  roles?: MMSUserRole[];
 }
 
+// Role visibility for each item is defined centrally in src/lib/route-access.ts
 const CORE_NAV_ITEMS: NavItem[] = [
-  {
-    label: "Dashboard",
-    href: "/",
-    icon: LayoutDashboard,
-    roles: [
-      "SYSTEM_ADMIN",
-      "WFM_OFFICER",
-      "SUBCONTRACTOR",
-      "CONTRACTOR_HR",
-      "CONTRACTOR_HSE",
-      "CLIENT_APPROVER",
-      "SITE_ADMIN",
-      "MANAGEMENT_VIEWER",
-    ],
-  },
-  {
-    label: "Worker Master",
-    href: "/workers",
-    icon: Users,
-    roles: [
-      "SYSTEM_ADMIN",
-      "WFM_OFFICER",
-      "CONTRACTOR_HR",
-      "CONTRACTOR_HSE",
-      "CLIENT_APPROVER",
-      "SITE_ADMIN",
-      "MANAGEMENT_VIEWER",
-    ],
-  },
-  {
-    label: "Bulk Onboarding",
-    href: "/import",
-    icon: FileSpreadsheet,
-    roles: ["SYSTEM_ADMIN", "WFM_OFFICER", "SUBCONTRACTOR", "CONTRACTOR_HR"],
-  },
-  {
-    label: "Document Center",
-    href: "/documents",
-    icon: FileCheck,
-    roles: [
-      "SYSTEM_ADMIN",
-      "WFM_OFFICER",
-      "SUBCONTRACTOR",
-      "CONTRACTOR_HR",
-      "CONTRACTOR_HSE",
-    ],
-  },
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Worker Master", href: "/workers", icon: Users },
+  { label: "Bulk Onboarding", href: "/import", icon: FileSpreadsheet },
+  { label: "Document Center", href: "/documents", icon: FileCheck },
   {
     label: "Due Date Watchlist",
     href: "/documents/expiry",
     icon: Clock,
     badge: "Alert",
     badgeColor: "bg-rose-500 text-white",
-    roles: [
-      "SYSTEM_ADMIN",
-      "WFM_OFFICER",
-      "SUBCONTRACTOR",
-      "CONTRACTOR_HR",
-      "CONTRACTOR_HSE",
-    ],
   },
-  {
-    label: "Pre-Mobilization",
-    href: "/pre-mobilization",
-    icon: ClipboardCheck,
-    roles: [
-      "SYSTEM_ADMIN",
-      "WFM_OFFICER",
-      "SUBCONTRACTOR",
-      "CONTRACTOR_HR",
-      "CONTRACTOR_HSE",
-    ],
-  },
+  { label: "Pre-Mobilization", href: "/pre-mobilization", icon: ClipboardCheck },
   {
     label: "Approval Workspace",
     href: "/approvals",
     icon: GitPullRequestDraft,
     badge: "3",
     badgeColor: "bg-amber-500 text-slate-950",
-    roles: ["SYSTEM_ADMIN", "CONTRACTOR_HR", "CONTRACTOR_HSE", "CLIENT_APPROVER"],
   },
-  {
-    label: "Mobilization Board",
-    href: "/mobilization",
-    icon: Send,
-    roles: ["SYSTEM_ADMIN", "WFM_OFFICER", "SITE_ADMIN", "CONTRACTOR_HR"],
-  },
-  {
-    label: "On-Site Manpower",
-    href: "/on-site",
-    icon: Building2,
-    roles: [
-      "SYSTEM_ADMIN",
-      "WFM_OFFICER",
-      "SITE_ADMIN",
-      "CONTRACTOR_HR",
-      "CLIENT_APPROVER",
-      "MANAGEMENT_VIEWER",
-    ],
-  },
-  {
-    label: "Demobilization",
-    href: "/demobilization",
-    icon: LogOut,
-    roles: ["SYSTEM_ADMIN", "WFM_OFFICER", "SITE_ADMIN", "CONTRACTOR_HR"],
-  },
+  { label: "Mobilization Board", href: "/mobilization", icon: Send },
+  { label: "On-Site Manpower", href: "/on-site", icon: Building2 },
+  { label: "Demobilization", href: "/demobilization", icon: LogOut },
 ];
 
 const ADMIN_NAV_ITEMS: NavItem[] = [
-  {
-    label: "Master Vendor & Quota",
-    href: "/vendors",
-    icon: Building,
-    roles: [
-      "SYSTEM_ADMIN",
-      "WFM_OFFICER",
-      "CONTRACTOR_HR",
-      "CLIENT_APPROVER",
-      "MANAGEMENT_VIEWER",
-      "SUBCONTRACTOR",
-    ],
-  },
-  {
-    label: "Requirement Rules",
-    href: "/requirements",
-    icon: Sliders,
-    roles: ["SYSTEM_ADMIN", "WFM_OFFICER", "CONTRACTOR_HSE"],
-  },
-  {
-    label: "User & Access (RBAC)",
-    href: "/users",
-    icon: ShieldCheck,
-    roles: ["SYSTEM_ADMIN"],
-  },
-  {
-    label: "Reports & Analytics",
-    href: "/reports",
-    icon: BarChart3,
-    roles: [
-      "SYSTEM_ADMIN",
-      "WFM_OFFICER",
-      "CONTRACTOR_HR",
-      "CONTRACTOR_HSE",
-      "CLIENT_APPROVER",
-      "MANAGEMENT_VIEWER",
-    ],
-  },
+  { label: "Master Vendor & Quota", href: "/vendors", icon: Building },
+  { label: "Requirement Rules", href: "/requirements", icon: Sliders },
+  { label: "User & Access (RBAC)", href: "/users", icon: ShieldCheck },
+  { label: "Reports & Analytics", href: "/reports", icon: BarChart3 },
 ];
 
-export function Sidebar() {
+export function Sidebar({ user }: { user: SessionUser }) {
   const pathname = usePathname();
-  const [currentRole, setCurrentRole] = useState<MMSUserRole>("SYSTEM_ADMIN");
-  const [isClient, setIsClient] = useState(false);
+  const persona = DEMO_PERSONAS[user.role];
 
-  useEffect(() => {
-    setIsClient(true);
-    const updateRole = () => {
-      const saved = localStorage.getItem("mms_current_role") as MMSUserRole;
-      if (saved && DEMO_PERSONAS[saved]) {
-        setCurrentRole(saved);
-      }
-    };
-
-    updateRole();
-    window.addEventListener("mms_role_changed", updateRole);
-    return () => window.removeEventListener("mms_role_changed", updateRole);
-  }, []);
-
-  const persona: DemoPersona = DEMO_PERSONAS[currentRole] || DEMO_PERSONAS.SYSTEM_ADMIN;
-
-  // Filter menus based on active role
-  const filterByRole = (items: NavItem[]) => {
-    if (!isClient) return items; // Server-side render baseline
-    if (currentRole === "SYSTEM_ADMIN") return items; // Admin sees all
-    return items.filter((item) => !item.roles || item.roles.includes(currentRole));
-  };
+  // Filter menus based on the authenticated user's role (same rules the middleware enforces)
+  const filterByRole = (items: NavItem[]) => items.filter((item) => canAccessRoute(user.role, item.href));
 
   const visibleCoreItems = filterByRole(CORE_NAV_ITEMS);
   const visibleAdminItems = filterByRole(ADMIN_NAV_ITEMS);
@@ -268,7 +131,7 @@ export function Sidebar() {
       <div className="p-3 mx-3 my-2.5 rounded-xl bg-slate-950/80 border border-slate-800">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${persona.avatarBg}`} />
+            <span className={`w-2 h-2 rounded-full ${persona?.avatarBg ?? "bg-slate-500"}`} />
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
               Akses Role Aktif
             </span>
@@ -277,8 +140,8 @@ export function Sidebar() {
             {visibleCoreItems.length + visibleAdminItems.length} Menu
           </span>
         </div>
-        <div className="font-bold text-xs text-white truncate mt-1">{persona.roleLabel}</div>
-        <div className="text-[11px] text-slate-400 truncate">{persona.companyName}</div>
+        <div className="font-bold text-xs text-white truncate mt-1">{persona?.roleLabel ?? user.role}</div>
+        <div className="text-[11px] text-slate-400 truncate">{user.companyName ?? "-"}</div>
       </div>
 
       {/* Navigation List */}

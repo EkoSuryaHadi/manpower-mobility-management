@@ -1,16 +1,44 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/auth-guard";
+import { serverErrorResponse, successResponse } from "@/lib/api-utils";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   try {
+    const auth = await requireAuth(req, ["MONITOR_DOCUMENT_EXPIRY"]);
+    if (auth.error) return auth.error;
+    const actor = auth.user;
+
     const { searchParams } = new URL(req.url);
     const filter = searchParams.get("filter") || "ALL"; // ALL, EXPIRED, URGENT, WARNING, SAFE
     const category = searchParams.get("category") || "ALL"; // IDENTITY, MEDICAL, HSE, COMPETENCY, LEGAL, INSURANCE
-    const companyId = searchParams.get("companyId") || "ALL";
+    let companyId = searchParams.get("companyId") || "ALL";
+
+    // Subcontractors are strictly scoped to their own company
+    if (actor.role === "SUBCONTRACTOR" && actor.companyId) {
+      companyId = actor.companyId;
+    }
+
+    const whereAssignment: any = {
+      status: {
+        in: ["PLANNED", "PRE_MOBILIZATION", "READY_TO_MOBILIZE", "MOBILIZED", "ON_SITE"],
+      },
+    };
+
+    if (companyId !== "ALL") {
+      whereAssignment.companyId = companyId;
+    }
 
     const documents = await prisma.workerDocument.findMany({
+      where: {
+        worker: {
+          assignments: {
+            some: whereAssignment,
+          },
+        },
+      },
       include: {
         worker: {
           select: {
@@ -20,11 +48,7 @@ export async function GET(req: Request) {
             employeeNo: true,
             status: true,
             assignments: {
-              where: {
-                status: {
-                  in: ["PLANNED", "PRE_MOBILIZATION", "READY_TO_MOBILIZE", "MOBILIZED", "ON_SITE"],
-                },
-              },
+              where: whereAssignment,
               take: 1,
               include: {
                 company: true,
@@ -137,10 +161,7 @@ export async function GET(req: Request) {
       stats,
       data: results,
     });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error.message || "Failed to fetch document expiry list" },
-      { status: 500 }
-    );
+  } catch (error) {
+    return serverErrorResponse("document-expiry", error);
   }
 }

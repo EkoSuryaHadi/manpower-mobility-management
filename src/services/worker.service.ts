@@ -63,15 +63,16 @@ export const WorkerService = {
     });
   },
 
-  async create(input: CreateWorkerInput, ipAddress?: string) {
+  async create(input: CreateWorkerInput, ipAddress?: string, actor?: { id?: string; name?: string }) {
     const existing = await prisma.worker.findUnique({ where: { nik: input.nik } });
     if (existing) {
       throw new Error(`Worker dengan NIK ${input.nik} sudah terdaftar (${existing.fullName}).`);
     }
 
+    const year = new Date().getFullYear();
     const employeeNo =
-      input.employeeNo ||
-      `EMP-${new Date().getFullYear()}-${Date.now().toString().slice(-5)}${Math.floor(100 + Math.random() * 900)}`;
+      input.employeeNo?.trim() ||
+      `EMP-${year}-${Date.now().toString().slice(-6)}`;
 
     const worker = await prisma.worker.create({
       data: {
@@ -111,7 +112,8 @@ export const WorkerService = {
     }
 
     await logAuditEvent({
-      actorName: "HR / WFM Officer",
+      actorId: actor?.id,
+      actorName: actor?.name || "HR / WFM Officer",
       action: "CREATE",
       entityType: "WORKER",
       entityId: worker.id,

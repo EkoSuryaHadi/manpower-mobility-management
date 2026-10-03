@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/auth-guard";
+import { errorResponse, serverErrorResponse, successResponse } from "@/lib/api-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -8,7 +10,16 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const auth = await requireAuth(req, ["VIEW_VENDOR_DASHBOARD", "MANAGE_VENDORS"]);
+    if (auth.error) return auth.error;
+    const actor = auth.user;
+
     const { id } = params;
+
+    // Subcontractor can only view their own vendor dashboard
+    if (actor.role === "SUBCONTRACTOR" && actor.companyId && actor.companyId !== id) {
+      return errorResponse("Anda tidak memiliki akses ke vendor ini.", 403);
+    }
 
     const company = await prisma.company.findUnique({
       where: { id },
@@ -48,10 +59,7 @@ export async function GET(
     });
 
     if (!company) {
-      return NextResponse.json(
-        { success: false, error: "Company / Vendor not found" },
-        { status: 404 }
-      );
+      return errorResponse("Company / Vendor tidak ditemukan.", 404);
     }
 
     const now = new Date();
@@ -64,11 +72,9 @@ export async function GET(
     const preMobCount = company.assignments.filter((a) => a.status === "PRE_MOBILIZATION").length;
     const plannedCount = company.assignments.filter((a) => a.status === "PLANNED").length;
 
-    // Quota definition
     const approvedQuota = totalAssigned > 0 ? Math.max(totalAssigned + 8, 25) : 20;
     const quotaUtilization = Math.round((onSiteCount / approvedQuota) * 100);
 
-    // Expired and Expiring documents
     const expiredDocs: any[] = [];
     const expiringSoonDocs: any[] = [];
 
@@ -100,43 +106,36 @@ export async function GET(
       });
     });
 
-    // Ring 1-4 Demographic breakdown
     const ring1 = Math.ceil(totalAssigned * 0.45);
     const ring2 = Math.floor(totalAssigned * 0.25);
     const ring3 = Math.floor(totalAssigned * 0.20);
     const ring4 = Math.max(0, totalAssigned - ring1 - ring2 - ring3);
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        ...company,
-        stats: {
-          totalAssigned,
-          onSiteCount,
-          readyToMobilizeCount,
-          preMobCount,
-          plannedCount,
-          approvedQuota,
-          quotaUtilization,
-          expiredDocs,
-          expiringSoonDocs,
-          ringBreakdown: {
-            ring1,
-            ring2,
-            ring3,
-            ring4,
-            ring1Percent: totalAssigned > 0 ? Math.round((ring1 / totalAssigned) * 100) : 0,
-            ring2Percent: totalAssigned > 0 ? Math.round((ring2 / totalAssigned) * 100) : 0,
-            ring3Percent: totalAssigned > 0 ? Math.round((ring3 / totalAssigned) * 100) : 0,
-            ring4Percent: totalAssigned > 0 ? Math.round((ring4 / totalAssigned) * 100) : 0,
-          },
+    return successResponse({
+      ...company,
+      stats: {
+        totalAssigned,
+        onSiteCount,
+        readyToMobilizeCount,
+        preMobCount,
+        plannedCount,
+        approvedQuota,
+        quotaUtilization,
+        expiredDocs,
+        expiringSoonDocs,
+        ringBreakdown: {
+          ring1,
+          ring2,
+          ring3,
+          ring4,
+          ring1Percent: totalAssigned > 0 ? Math.round((ring1 / totalAssigned) * 100) : 0,
+          ring2Percent: totalAssigned > 0 ? Math.round((ring2 / totalAssigned) * 100) : 0,
+          ring3Percent: totalAssigned > 0 ? Math.round((ring3 / totalAssigned) * 100) : 0,
+          ring4Percent: totalAssigned > 0 ? Math.round((ring4 / totalAssigned) * 100) : 0,
         },
       },
     });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error.message || "Failed to fetch vendor detail" },
-      { status: 500 }
-    );
+  } catch (error) {
+    return serverErrorResponse("vendor-detail", error);
   }
 }

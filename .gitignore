@@ -13,3 +13,5 @@ yarn-error.log*
 dev.db
 dev.db-journal
 .superpowers/
+*.tsbuildinfo
+.vscode/

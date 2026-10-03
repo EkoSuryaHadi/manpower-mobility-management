@@ -10,6 +10,12 @@ export function errorResponse(error: string, status: number = 400) {
   return NextResponse.json({ success: false, error } satisfies ApiResponse, { status });
 }
 
+/** Log the real error server-side and return a generic 500 so internals are not leaked to clients. */
+export function serverErrorResponse(context: string, error: unknown) {
+  console.error(`[${context}]`, error);
+  return errorResponse("Terjadi kesalahan pada server. Silakan coba lagi.", 500);
+}
+
 export function parseBody<T>(schema: ZodSchema<T>, data: unknown): { data: T } | { error: NextResponse } {
   try {
     return { data: schema.parse(data) };

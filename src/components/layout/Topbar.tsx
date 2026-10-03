@@ -1,11 +1,12 @@
 "use client";
 
 import React from "react";
-import { DevRoleSwitcher } from "./DevRoleSwitcher";
+import { UserMenu } from "./UserMenu";
 import { NotificationDropdown } from "./NotificationDropdown";
 import { Search, HelpCircle } from "lucide-react";
+import type { SessionUser } from "./types";
 
-export function Topbar() {
+export function Topbar({ user }: { user: SessionUser }) {
   return (
     <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0 shadow-sm z-10">
       {/* Global Search */}
@@ -36,8 +37,8 @@ export function Topbar() {
 
         <div className="h-6 w-px bg-slate-200 mx-1" />
 
-        {/* Development Persona Impersonator */}
-        {process.env.NODE_ENV === "development" && <DevRoleSwitcher />}
+        {/* Authenticated user & logout */}
+        <UserMenu user={user} />
       </div>
     </header>
   );
