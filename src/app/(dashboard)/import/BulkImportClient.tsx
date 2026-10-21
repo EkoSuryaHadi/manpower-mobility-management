@@ -33,14 +33,26 @@ interface BulkImportClientProps {
   companies: any[];
   projects: any[];
   sites: any[];
-  existingNiks: string[];
+  existingNiks?: string[];
+  existingWorkers?: Array<{
+    nik: string;
+    fullName: string;
+    status: string;
+    currentAssignment?: {
+      companyName: string;
+      projectName: string;
+      siteName: string;
+      position: string;
+    } | null;
+  }>;
 }
 
 export function BulkImportClient({
   companies,
   projects,
   sites,
-  existingNiks,
+  existingNiks = [],
+  existingWorkers = [],
 }: BulkImportClientProps) {
   const router = useRouter();
   const [selectedProjectId, setSelectedProjectId] = useState(projects[0]?.id || "");
@@ -120,9 +132,37 @@ export function BulkImportClient({
           let status: StagingRow["status"] = "VALID";
           if (errors.length > 0) {
             status = "ERROR";
-          } else if (existingNiks.includes(nik) || seenNiksInFile.has(nik)) {
-            status = "DUPLICATE";
-            errors.push("NIK sudah terdaftar di database atau terduplikasi di file");
+          } else {
+            // Check NIK against existing workers
+            const existingWorkerByNik = existingWorkers.find((w) => w.nik === nik);
+            if (existingWorkerByNik) {
+              status = "DUPLICATE";
+              if (existingWorkerByNik.status === "ACTIVE") {
+                const loc = existingWorkerByNik.currentAssignment
+                  ? ` di ${existingWorkerByNik.currentAssignment.companyName} (${existingWorkerByNik.currentAssignment.projectName})`
+                  : "";
+                errors.push(`Pekerja masih AKTIF BEKERJA${loc}. Pendaftaran ulang diblokir.`);
+              } else {
+                errors.push(`NIK sudah terdaftar di database (Status: ${existingWorkerByNik.status})`);
+              }
+            } else if (existingNiks.includes(nik)) {
+              status = "DUPLICATE";
+              errors.push("NIK sudah terdaftar di database");
+            } else if (seenNiksInFile.has(nik)) {
+              status = "DUPLICATE";
+              errors.push("NIK terduplikasi pada baris lain di spreadsheet");
+            }
+
+            // Check Name against existing active workers
+            const existingWorkerByName = existingWorkers.find(
+              (w) => w.fullName.trim().toLowerCase() === name.toLowerCase() && w.status === "ACTIVE"
+            );
+            if (existingWorkerByName && existingWorkerByName.nik !== nik) {
+              const loc = existingWorkerByName.currentAssignment
+                ? ` di ${existingWorkerByName.currentAssignment.projectName} (${existingWorkerByName.currentAssignment.siteName})`
+                : "";
+              errors.push(`Perhatian: Ditemukan pekerja aktif bernama serupa (${existingWorkerByName.fullName}, NIK: ${existingWorkerByName.nik}${loc})`);
+            }
           }
 
           seenNiksInFile.add(nik);

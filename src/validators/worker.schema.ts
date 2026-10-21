@@ -22,6 +22,7 @@ export const createWorkerSchema = z.object({
   trade: z.string().optional(),
   rotationSchedule: z.string().optional(),
   startDate: z.string().optional(),
+  allowDuplicateName: z.boolean().optional(),
 });
 
 export type CreateWorkerInput = z.infer<typeof createWorkerSchema>;

@@ -15,3 +15,4 @@ dev.db-journal
 .superpowers/
 *.tsbuildinfo
 .vscode/
+.antigravitycli/

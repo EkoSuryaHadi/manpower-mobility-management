@@ -11,13 +11,38 @@ export default async function BulkImportPage() {
   let projects: any[] = [];
   let sites: any[] = [];
   let existingNiks: string[] = [];
+  let existingWorkers: any[] = [];
 
   try {
     companies = await prisma.company.findMany();
     projects = await prisma.project.findMany();
     sites = await prisma.site.findMany();
-    const workers = await prisma.worker.findMany({ select: { nik: true } });
+    const workers = await prisma.worker.findMany({
+      select: {
+        nik: true,
+        fullName: true,
+        status: true,
+        assignments: {
+          include: { company: true, project: true, site: true },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
+      },
+    });
     existingNiks = workers.map((w) => w.nik);
+    existingWorkers = workers.map((w) => ({
+      nik: w.nik,
+      fullName: w.fullName,
+      status: w.status,
+      currentAssignment: w.assignments[0]
+        ? {
+            companyName: w.assignments[0].company.name,
+            projectName: w.assignments[0].project.name,
+            siteName: w.assignments[0].site.name,
+            position: w.assignments[0].position,
+          }
+        : null,
+    }));
   } catch (e) {
     // Database initializing
   }
@@ -48,6 +73,7 @@ export default async function BulkImportPage() {
         projects={projects}
         sites={sites}
         existingNiks={existingNiks}
+        existingWorkers={existingWorkers}
       />
     </div>
   );

@@ -19,6 +19,8 @@ import {
   CheckCircle,
   ExternalLink,
 } from "lucide-react";
+import { calculateWorkerReadiness } from "@/lib/readiness-engine";
+import { WorkerDocumentsClient } from "@/components/workers/WorkerDocumentsClient";
 
 export const dynamic = "force-dynamic";
 
@@ -61,7 +63,23 @@ export default async function WorkerProfilePage({
   }
 
   const currentAssignment = worker.assignments[0];
-  const isReady = worker.overallReadinessScore === 100;
+
+  let readinessSummary = null;
+  if (currentAssignment) {
+    try {
+      readinessSummary = await calculateWorkerReadiness(currentAssignment.id);
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  const documentTypes = await prisma.documentType.findMany({
+    orderBy: { name: "asc" },
+  });
+
+  const effectiveScore = readinessSummary?.readinessScore ?? worker.overallReadinessScore;
+  const isReady = effectiveScore === 100;
+  const missingCount = readinessSummary?.missingCount ?? 0;
 
   return (
     <div className="space-y-6">
@@ -125,7 +143,7 @@ export default async function WorkerProfilePage({
                 ) : (
                   <AlertTriangle className="w-5 h-5 text-rose-600" />
                 )}
-                {worker.overallReadinessScore}%
+                {effectiveScore}%
               </div>
               <div className="text-[10px] text-slate-400">
                 {isReady ? "All mandatory docs verified" : "Action required for mobilization"}
@@ -148,7 +166,12 @@ export default async function WorkerProfilePage({
           {[
             { id: "overview", label: "Overview & Personal Info", icon: User },
             { id: "assignments", label: `Assignments (${worker.assignments.length})`, icon: Briefcase },
-            { id: "documents", label: `Documents & Compliance (${worker.documents.length})`, icon: FileCheck },
+            {
+              id: "documents",
+              label: `Documents & Compliance (${worker.documents.length})`,
+              badge: missingCount > 0 ? `${missingCount} Belum Lengkap` : null,
+              icon: FileCheck,
+            },
             { id: "timeline", label: "Movement & Audit History", icon: History },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -164,7 +187,12 @@ export default async function WorkerProfilePage({
                 }`}
               >
                 <Icon className="w-4 h-4" />
-                {tab.label}
+                <span>{tab.label}</span>
+                {tab.badge && (
+                  <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-rose-500 text-white shadow-sm">
+                    {tab.badge}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -291,69 +319,14 @@ export default async function WorkerProfilePage({
       )}
 
       {activeTab === "documents" && (
-        <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-            <div>
-              <h2 className="text-sm font-bold text-slate-800">Compliance & Mandatory Documents</h2>
-              <p className="text-xs text-slate-500">Daftar sertifikat, MCU, dan berkas legal pekerja</p>
-            </div>
-            <button className="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs font-medium transition">
-              Upload New Document
-            </button>
-          </div>
-
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
-              <tr>
-                <th className="py-3 px-4">Document Type</th>
-                <th className="py-3 px-4">Document Number</th>
-                <th className="py-3 px-4">Issue Date</th>
-                <th className="py-3 px-4">Expiry Date</th>
-                <th className="py-3 px-4">Verification Status</th>
-                <th className="py-3 px-4">Remarks</th>
-                <th className="py-3 px-4 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
-              {worker.documents.map((d) => (
-                <tr key={d.id} className="hover:bg-slate-50 transition">
-                  <td className="py-3 px-4">
-                    <div className="font-bold text-slate-900">{d.documentType.name}</div>
-                    <div className="text-[11px] text-slate-400">{d.documentType.category}</div>
-                  </td>
-                  <td className="py-3 px-4 font-mono text-slate-800">{d.documentNumber}</td>
-                  <td className="py-3 px-4">
-                    {new Date(d.issueDate).toLocaleDateString("id-ID")}
-                  </td>
-                  <td className="py-3 px-4">
-                    {d.expiryDate ? (
-                      <span className="font-medium text-slate-800">
-                        {new Date(d.expiryDate).toLocaleDateString("id-ID")}
-                      </span>
-                    ) : (
-                      <span className="text-slate-400">Permanent / Seumur Hidup</span>
-                    )}
-                  </td>
-                  <td className="py-3 px-4">
-                    <StatusChip status={d.verificationStatus} />
-                  </td>
-                  <td className="py-3 px-4 max-w-xs truncate text-slate-500">
-                    {d.verifierRemarks || "-"}
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <Link
-                      href={`/documents?docId=${d.id}`}
-                      className="inline-flex items-center gap-1 text-brand-600 hover:text-brand-700 font-medium"
-                    >
-                      Verify / View
-                      <ExternalLink className="w-3 h-3" />
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <WorkerDocumentsClient
+          workerId={worker.id}
+          workerName={worker.fullName}
+          documents={worker.documents}
+          documentTypes={documentTypes}
+          readinessChecklist={readinessSummary?.checklist || []}
+          readinessScore={effectiveScore}
+        />
       )}
 
       {activeTab === "timeline" && (

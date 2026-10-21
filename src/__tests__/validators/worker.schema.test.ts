@@ -58,6 +58,14 @@ describe("createWorkerSchema", () => {
     const result = createWorkerSchema.safeParse(fullInput);
     expect(result.success).toBe(true);
   });
+
+  it("accepts allowDuplicateName boolean flag", () => {
+    const result = createWorkerSchema.safeParse({ ...validInput, allowDuplicateName: true });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.allowDuplicateName).toBe(true);
+    }
+  });
 });
 
 describe("workerSearchSchema", () => {

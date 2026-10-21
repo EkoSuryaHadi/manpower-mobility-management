@@ -10,6 +10,9 @@ import {
   MapPin,
   Calendar,
   CheckCircle2,
+  ShieldAlert,
+  AlertTriangle,
+  Loader2,
 } from "lucide-react";
 
 interface OptionItem {
@@ -66,6 +69,49 @@ export function RegisterWorkerModal({
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
+  // Live duplicate checking state
+  const [dupChecking, setDupChecking] = useState(false);
+  const [dupResult, setDupResult] = useState<{
+    hasDuplicate: boolean;
+    duplicateNik: boolean;
+    duplicateName: boolean;
+    nikMatch: any;
+    nameMatch: any;
+  } | null>(null);
+  const [confirmDuplicateName, setConfirmDuplicateName] = useState(false);
+
+  // Debounced duplicate detection
+  React.useEffect(() => {
+    const nik = formData.nik.trim();
+    const name = formData.fullName.trim();
+
+    if (nik.length < 10 && name.length < 2) {
+      setDupResult(null);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setDupChecking(true);
+      try {
+        const params = new URLSearchParams();
+        if (nik.length >= 10) params.append("nik", nik);
+        if (name.length >= 2) params.append("name", name);
+
+        const res = await fetch(`/api/v1/workers/check-duplicate?${params.toString()}`);
+        const data = await res.json();
+        if (data.success) {
+          setDupResult(data.data);
+        }
+      } catch (err) {
+        // Ignore network background failures
+      } finally {
+        setDupChecking(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [formData.nik, formData.fullName]);
+
   if (!isOpen) return null;
 
   // Filter sites based on selected project
@@ -77,6 +123,11 @@ export function RegisterWorkerModal({
   const effectiveSiteId = formData.siteId && availableSites.some((s) => s.id === formData.siteId)
     ? formData.siteId
     : availableSites[0]?.id || "";
+
+  const isBlockedByNik = Boolean(dupResult?.duplicateNik && dupResult?.nikMatch?.isActive);
+  const hasActiveNameWarning = Boolean(
+    dupResult?.duplicateName && dupResult?.nameMatch?.isActive && !confirmDuplicateName
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,6 +142,18 @@ export function RegisterWorkerModal({
       return;
     }
 
+    if (isBlockedByNik) {
+      setErrorMsg("Pendaftaran dibatalkan: Pekerja dengan NIK ini masih berstatus aktif bekerja.");
+      setLoading(false);
+      return;
+    }
+
+    if (hasActiveNameWarning) {
+      setErrorMsg("Harap beri centang konfirmasi jika pekerja ini adalah individu yang berbeda dengan nama serupa.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch("/api/v1/workers", {
         method: "POST",
@@ -98,6 +161,7 @@ export function RegisterWorkerModal({
         body: JSON.stringify({
           ...formData,
           siteId: effectiveSiteId,
+          allowDuplicateName: confirmDuplicateName,
         }),
       });
 
@@ -158,10 +222,72 @@ export function RegisterWorkerModal({
             </div>
           )}
 
+          {/* Hard Block Banner: Active Worker by NIK */}
+          {isBlockedByNik && dupResult?.nikMatch && (
+            <div className="p-4 rounded-xl bg-rose-50 border-2 border-rose-300 text-rose-900 text-xs space-y-2 animate-in fade-in">
+              <div className="flex items-center gap-2 font-bold text-rose-700">
+                <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0" />
+                <span className="text-sm">Peringatan: Pekerja Ini Masih Aktif Bekerja!</span>
+              </div>
+              <p className="leading-relaxed text-xs">
+                Pekerja dengan NIK <span className="font-mono font-bold text-rose-950">{dupResult.nikMatch.nik}</span> ({dupResult.nikMatch.fullName}) saat ini <strong>masih berstatus AKTIF</strong> di sistem.
+              </p>
+              {dupResult.nikMatch.currentAssignment ? (
+                <div className="bg-white/90 p-3 rounded-lg border border-rose-200 text-[11px] space-y-1 text-slate-800">
+                  <div><strong>Perusahaan:</strong> {dupResult.nikMatch.currentAssignment.companyName}</div>
+                  <div><strong>Penempatan:</strong> Proyek {dupResult.nikMatch.currentAssignment.projectName} ({dupResult.nikMatch.currentAssignment.siteName})</div>
+                  <div><strong>Posisi:</strong> {dupResult.nikMatch.currentAssignment.position} &bull; Status: <span className="font-semibold text-rose-600 uppercase">{dupResult.nikMatch.currentAssignment.status}</span></div>
+                </div>
+              ) : (
+                <div className="text-[11px] text-rose-700 italic">Pekerja tercatat aktif di Master Manpower.</div>
+              )}
+              <div className="text-[11px] font-semibold text-rose-800 flex items-center gap-1.5 pt-1">
+                <span>⛔ Sistem memblokir pendaftaran ganda untuk pekerja yang sedang aktif bekerja.</span>
+              </div>
+            </div>
+          )}
+
+          {/* Warning Banner: Active Worker with Same Name */}
+          {dupResult?.duplicateName && dupResult?.nameMatch?.isActive && !isBlockedByNik && (
+            <div className="p-4 rounded-xl bg-amber-50 border-2 border-amber-300 text-amber-900 text-xs space-y-2.5 animate-in fade-in">
+              <div className="flex items-center gap-2 font-bold text-amber-800">
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+                <span className="text-sm">Perhatian: Ditemukan Pekerja Aktif Bernama Serupa</span>
+              </div>
+              <p className="leading-relaxed text-xs">
+                Terdapat pekerja dengan nama serupa: <strong>{dupResult.nameMatch.fullName}</strong> (NIK: <span className="font-mono">{dupResult.nameMatch.nik}</span>) yang saat ini <strong>masih aktif bekerja</strong>.
+              </p>
+              {dupResult.nameMatch.currentAssignment && (
+                <div className="bg-white/90 p-2.5 rounded-lg border border-amber-200 text-[11px] space-y-1 text-slate-800">
+                  <div><strong>Perusahaan:</strong> {dupResult.nameMatch.currentAssignment.companyName}</div>
+                  <div><strong>Penempatan:</strong> Proyek {dupResult.nameMatch.currentAssignment.projectName} ({dupResult.nameMatch.currentAssignment.siteName})</div>
+                  <div><strong>Posisi:</strong> {dupResult.nameMatch.currentAssignment.position}</div>
+                </div>
+              )}
+              <label className="flex items-start gap-2 pt-1.5 cursor-pointer select-none bg-amber-100/70 p-2 rounded-lg border border-amber-200">
+                <input
+                  type="checkbox"
+                  checked={confirmDuplicateName}
+                  onChange={(e) => setConfirmDuplicateName(e.target.checked)}
+                  className="mt-0.5 rounded border-amber-400 text-amber-600 focus:ring-amber-500 w-4 h-4 cursor-pointer"
+                />
+                <span className="text-[11px] font-medium text-amber-950">
+                  Saya mengonfirmasi bahwa calon pekerja ini adalah <strong>individu yang berbeda</strong> (bukan pekerja aktif di atas).
+                </span>
+              </label>
+            </div>
+          )}
+
           {/* Section 1: Data Identitas Diri */}
           <div>
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center justify-between">
               <span>1. Identitas Pokok & Biodata</span>
+              {dupChecking && (
+                <span className="flex items-center gap-1 text-[11px] text-brand-600 normal-case font-medium">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Memeriksa duplikasi...
+                </span>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -454,10 +580,22 @@ export function RegisterWorkerModal({
             </button>
             <button
               type="submit"
-              disabled={loading}
-              className="px-4 py-2 bg-brand-600 text-white rounded-lg text-xs font-medium hover:bg-brand-500 transition shadow-sm disabled:opacity-50 flex items-center gap-1.5"
+              disabled={loading || isBlockedByNik || hasActiveNameWarning}
+              className={`px-4 py-2 rounded-lg text-xs font-medium transition shadow-sm flex items-center gap-1.5 ${
+                isBlockedByNik
+                  ? "bg-rose-100 text-rose-700 cursor-not-allowed border border-rose-300"
+                  : hasActiveNameWarning
+                  ? "bg-amber-100 text-amber-800 cursor-not-allowed border border-amber-300"
+                  : "bg-brand-600 text-white hover:bg-brand-500 disabled:opacity-50"
+              }`}
             >
-              {loading ? "Menyimpan Pekerja..." : "Simpan & Daftarkan Pekerja"}
+              {loading
+                ? "Menyimpan Pekerja..."
+                : isBlockedByNik
+                ? "Pekerja Masih Aktif Bekerja (Diblokir)"
+                : hasActiveNameWarning
+                ? "Perlu Konfirmasi Nama Serupa"
+                : "Simpan & Daftarkan Pekerja"}
             </button>
           </div>
         </form>

@@ -64,10 +64,35 @@ export async function POST(req: NextRequest) {
           w.employeeNo?.trim() ||
           `EMP-${year}-${batchTimestamp}-${seqStr}`;
 
-        // Upsert / connect worker
-        let workerRecord = await prisma.worker.findUnique({ where: { nik: cleanNik } });
+        // Check if existing worker is already active in an assignment
+        let workerRecord = await prisma.worker.findUnique({
+          where: { nik: cleanNik },
+          include: {
+            assignments: {
+              where: {
+                status: {
+                  in: ["PLANNED", "PRE_MOBILIZATION", "READY_TO_MOBILIZE", "MOBILIZED", "ON_SITE"],
+                },
+              },
+              include: { project: true, site: true },
+              take: 1,
+            },
+          },
+        });
+
+        if (workerRecord && workerRecord.status === "ACTIVE" && workerRecord.assignments.length > 0) {
+          const cur = workerRecord.assignments[0];
+          errors.push({
+            row: rowNum,
+            nik: cleanNik,
+            error: `Pekerja (${workerRecord.fullName}) masih aktif bekerja di Proyek ${cur.project.name} (${cur.site.name}).`,
+          });
+          continue;
+        }
+
+        let workerId: string;
         if (!workerRecord) {
-          workerRecord = await prisma.worker.create({
+          const newWorker = await prisma.worker.create({
             data: {
               employeeNo,
               fullName: String(w.fullName).trim(),
@@ -79,12 +104,15 @@ export async function POST(req: NextRequest) {
               overallReadinessScore: 0.0,
             },
           });
+          workerId = newWorker.id;
+        } else {
+          workerId = workerRecord.id;
         }
 
         // Create Assignment
         const assignment = await prisma.workerAssignment.create({
           data: {
-            workerId: workerRecord.id,
+            workerId,
             projectId,
             siteId,
             companyId,
